@@ -1,4 +1,5 @@
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
@@ -7,10 +8,12 @@ async function bootstrap() {
     bodyParser: false,
   });
 
+  const configService = app.get(ConfigService);
+
   app.setGlobalPrefix('api');
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: configService.get<string>('FRONTEND_URL'),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -24,11 +27,10 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = configService.get<number>('PORT') ?? 3000;
+  await app.listen(port);
 
-  console.log(
-    `🚀 Backend running at http://localhost:${process.env.PORT ?? 3000}/api`,
-  );
+  console.log(`🚀 Backend running at http://localhost:${port}/api`);
 }
 
 void bootstrap();
