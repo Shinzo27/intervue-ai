@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { LoggerModule } from 'nestjs-pino';
+import { v4 as uuidv4 } from 'uuid';
 import { auth } from './auth/auth';
+import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -17,6 +19,14 @@ import { HealthModule } from './health/health.module';
         return {
           pinoHttp: {
             level: isProduction ? 'info' : 'debug',
+            genReqId(req, res) {
+              const existingId =
+                (req.headers['x-request-id'] as string | undefined) ||
+                (req as { id?: string }).id;
+              const id = existingId || uuidv4();
+              res.setHeader('X-Request-ID', id);
+              return id;
+            },
             transport: isProduction
               ? undefined
               : {
@@ -42,4 +52,8 @@ import { HealthModule } from './health/health.module';
     HealthModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}
