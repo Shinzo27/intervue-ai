@@ -1,12 +1,16 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
     bodyParser: false,
   });
+
+  app.useLogger(app.get(Logger));
 
   const configService = app.get(ConfigService);
 
@@ -30,7 +34,8 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') ?? 3000;
   await app.listen(port);
 
-  console.log(`🚀 Backend running at http://localhost:${port}/api`);
+  const logger = app.get(Logger);
+  logger.log(`🚀 Backend running at http://localhost:${port}/api`);
 }
 
 void bootstrap();
