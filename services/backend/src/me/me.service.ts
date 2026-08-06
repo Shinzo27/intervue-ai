@@ -1,4 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class MeService {}
+export class MeService {
+  getProfile(session: unknown) {
+    return session;
+  }
+}

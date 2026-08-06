@@ -83,8 +83,8 @@ import { MeModule } from './me/me.module';
         };
       },
     }),
-    AuthModule.forRoot({ auth }),
     HealthModule,
+    AuthModule.forRoot({ auth }),
     MeModule,
   ],
 })
