@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { auth } from './auth/auth';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware';
 import { HealthModule } from './health/health.module';
+import { MeModule } from './me/me.module';
 
 @Module({
   imports: [
@@ -26,6 +27,40 @@ import { HealthModule } from './health/health.module';
               const id = existingId || uuidv4();
               res.setHeader('X-Request-ID', id);
               return id;
+            },
+            customAttributeKeys: {
+              responseTime: 'duration',
+            },
+            customProps(req) {
+              const r = req as {
+                user?: { id?: string };
+                session?: {
+                  userId?: string;
+                  user?: { id?: string };
+                  activeOrganizationId?: string;
+                  session?: { activeOrganizationId?: string };
+                };
+                organizationId?: string;
+                id?: string;
+                headers: Record<string, string | string[] | undefined>;
+              };
+              const userId =
+                r.user?.id || r.session?.user?.id || r.session?.userId || null;
+              const organizationId =
+                r.organizationId ||
+                r.session?.activeOrganizationId ||
+                r.session?.session?.activeOrganizationId ||
+                null;
+              const requestId =
+                (r.headers['x-request-id'] as string | undefined) ||
+                r.id ||
+                null;
+
+              return {
+                userId,
+                organizationId,
+                requestId,
+              };
             },
             transport: isProduction
               ? undefined
@@ -50,6 +85,7 @@ import { HealthModule } from './health/health.module';
     }),
     AuthModule.forRoot({ auth }),
     HealthModule,
+    MeModule,
   ],
 })
 export class AppModule implements NestModule {
