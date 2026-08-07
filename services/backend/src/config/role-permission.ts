@@ -1,0 +1,58 @@
+import { Permission } from '../auth/enums/permission.enum';
+import { Role } from '../auth/enums/roles.enum';
+
+export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
+  [Role.OWNER]: [
+    Permission.ORGANIZATION_MANAGE,
+    Permission.MEMBERS_MANAGE,
+
+    Permission.JOBS_CREATE,
+    Permission.JOBS_UPDATE,
+    Permission.JOBS_DELETE,
+
+    Permission.PIPELINE_CREATE,
+    Permission.PIPELINE_UPDATE,
+    Permission.PIPELINE_DELETE,
+    Permission.PIPELINE_VIEW,
+
+    Permission.CANDIDATE_VIEW,
+
+    Permission.INTERVIEW_EVALUATE,
+  ],
+
+  [Role.ADMIN]: [
+    Permission.MEMBERS_MANAGE,
+
+    Permission.JOBS_CREATE,
+    Permission.JOBS_UPDATE,
+    Permission.JOBS_DELETE,
+
+    Permission.PIPELINE_CREATE,
+    Permission.PIPELINE_UPDATE,
+    Permission.PIPELINE_DELETE,
+    Permission.PIPELINE_VIEW,
+
+    Permission.CANDIDATE_VIEW,
+
+    Permission.INTERVIEW_EVALUATE,
+  ],
+
+  [Role.RECRUITER]: [
+    Permission.JOBS_CREATE,
+    Permission.JOBS_UPDATE,
+
+    Permission.PIPELINE_CREATE,
+    Permission.PIPELINE_UPDATE,
+    Permission.PIPELINE_VIEW,
+
+    Permission.CANDIDATE_VIEW,
+  ],
+
+  [Role.INTERVIEWER]: [
+    Permission.PIPELINE_VIEW,
+
+    Permission.CANDIDATE_VIEW,
+
+    Permission.INTERVIEW_EVALUATE,
+  ],
+};
