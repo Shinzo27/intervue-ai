@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
 import { PipelinesModule } from './pipelines/pipelines.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PipelineStagesModule } from './pipeline-stages/pipeline-stages.module';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { PrismaModule } from './prisma/prisma.module';
     MeModule,
     PipelinesModule,
     PrismaModule,
+    PipelineStagesModule,
   ],
 })
 export class AppModule implements NestModule {
