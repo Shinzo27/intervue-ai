@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';
+import { UpdatePipelineDto } from './dto/update-pipeline.dto';
 
 @Injectable()
 export class PipelinesService {
@@ -52,5 +53,50 @@ export class PipelinesService {
     }
 
     return pipeline;
+  }
+
+  async update(organizationId: string, id: string, dto: UpdatePipelineDto) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: {
+        id,
+        organizationId,
+      },
+    });
+
+    if (!pipeline) {
+      throw new NotFoundException('Pipeline not found');
+    }
+
+    return this.prisma.pipeline.update({
+      where: {
+        id: pipeline.id,
+      },
+      data: {
+        name: dto.name,
+      },
+    });
+  }
+
+  async remove(organizationId: string, id: string) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: {
+        id,
+        organizationId,
+      },
+    });
+
+    if (!pipeline) {
+      throw new NotFoundException('Pipeline not found');
+    }
+
+    await this.prisma.pipeline.delete({
+      where: {
+        id: pipeline.id,
+      },
+    });
+
+    return {
+      message: 'Pipeline deleted successfully',
+    };
   }
 }

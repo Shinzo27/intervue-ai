@@ -6,8 +6,11 @@ import {
   UseGuards,
   Get,
   Param,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import express from 'express';
+import { UpdatePipelineDto } from './dto/update-pipeline.dto';
 import { PipelinesService } from './pipelines.service';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';
 import { getAuthContext } from '../auth/utils/session';
@@ -45,5 +48,25 @@ export class PipelinesController {
     const { organizationId } = await getAuthContext(request);
 
     return this.pipelinesService.findOne(organizationId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions(Permission.PIPELINE_UPDATE)
+  async update(
+    @Req() request: express.Request,
+    @Param('id') id: string,
+    @Body() dto: UpdatePipelineDto,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.pipelinesService.update(organizationId, id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions(Permission.PIPELINE_DELETE)
+  async remove(@Req() request: express.Request, @Param('id') id: string) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.pipelinesService.remove(organizationId, id);
   }
 }
