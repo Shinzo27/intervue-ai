@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UseGuards,
+  Get,
+  Param,
+} from '@nestjs/common';
 import express from 'express';
 import { PipelinesService } from './pipelines.service';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';
@@ -21,5 +29,21 @@ export class PipelinesController {
     const { userId, organizationId } = await getAuthContext(request);
 
     return this.pipelinesService.create(organizationId, userId, dto);
+  }
+
+  @Get()
+  @RequirePermissions(Permission.PIPELINE_VIEW)
+  async findAll(@Req() request: express.Request) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.pipelinesService.findAll(organizationId);
+  }
+
+  @Get(':id')
+  @RequirePermissions(Permission.PIPELINE_VIEW)
+  async findOne(@Req() request: express.Request, @Param('id') id: string) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.pipelinesService.findOne(organizationId, id);
   }
 }

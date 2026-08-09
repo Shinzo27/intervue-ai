@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';
 
@@ -14,5 +14,43 @@ export class PipelinesService {
         createdById: userId,
       },
     });
+  }
+
+  async findAll(organizationId: string) {
+    return this.prisma.pipeline.findMany({
+      where: {
+        organizationId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async findOne(organizationId: string, id: string) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: {
+        id,
+        organizationId,
+      },
+      include: {
+        stages: {
+          include: {
+            questions: {
+              include: {
+                options: true,
+                rubricCriteria: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!pipeline) {
+      throw new NotFoundException('Pipeline not found');
+    }
+
+    return pipeline;
   }
 }
