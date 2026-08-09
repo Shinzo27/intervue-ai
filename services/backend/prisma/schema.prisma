@@ -18,6 +18,8 @@ model User {
   invitations   Invitation[]
   members       Member[]
   sessions      Session[]
+  jobPostings   JobPosting[]
+  pipelines     Pipeline[]
 
   @@map("user")
 }
@@ -79,6 +81,8 @@ model Organization {
   metadata    String?
   invitations Invitation[]
   members     Member[]
+  jobPostings JobPosting[]
+  pipelines   Pipeline[]
 
   @@map("organization")
 }
@@ -112,4 +116,198 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+}
+
+enum JobPostingStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+model JobPosting {
+  id                String           @id @default(cuid())
+  title             String
+  description       String?
+  organizationId    String
+  createdById       String
+  pipelineId        String?
+  pipelineVersionId String?
+  status            JobPostingStatus @default(DRAFT)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  organization      Organization     @relation(fields: [organizationId], references: [id])
+  createdBy         User             @relation(fields: [createdById], references: [id])
+  pipeline          Pipeline?        @relation(fields: [pipelineId], references: [id])
+  pipelineVersion   PipelineVersion? @relation(fields: [pipelineVersionId], references: [id])
+
+  @@index([organizationId])
+  @@index([createdById])
+  @@index([pipelineId])
+}
+
+enum PipelineStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Pipeline {
+  id             String            @id @default(cuid())
+  name           String
+  organizationId String
+  createdById    String
+  status         PipelineStatus    @default(ACTIVE)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  versions       PipelineVersion[]
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  createdBy      User              @relation(fields: [createdById], references: [id])
+  jobPostings    JobPosting[]
+  stages         PipelineStage[]
+
+  @@index([organizationId])
+  @@index([createdById])
+}
+
+model PipelineStage {
+  id         String     @id @default(cuid())
+  name       String
+  order      Int
+  pipelineId String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  questions  Question[]
+  pipeline   Pipeline   @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@unique([pipelineId, order])
+  @@index([pipelineId])
+}
+
+enum QuestionType {
+  SINGLE_LINE
+  MULTI_LINE
+  MCQ
+}
+
+model Question {
+  id              String       @id @default(cuid())
+  question        String
+  type            QuestionType
+  order           Int
+  required        Boolean      @default(true)
+  pipelineStageId String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  pipelineStage  PipelineStage     @relation(fields: [pipelineStageId], references: [id], onDelete: Cascade)
+  options        QuestionOption[]
+  rubricCriteria RubricCriterion[]
+
+  @@unique([pipelineStageId, order])
+  @@index([pipelineStageId])
+}
+
+model QuestionOption {
+  id         String   @id @default(cuid())
+  questionId String
+  text       String
+  order      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, order])
+  @@index([questionId])
+}
+
+model RubricCriterion {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  maxScore    Int
+  questionId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+enum PipelineVersionStatus {
+  PUBLISHED
+  ARCHIVED
+}
+
+model PipelineVersion {
+  id          String                @id @default(cuid())
+  pipelineId  String
+  version     Int
+  status      PipelineVersionStatus @default(PUBLISHED)
+  publishedAt DateTime              @default(now())
+  createdAt   DateTime              @default(now())
+
+  pipeline    Pipeline               @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stages      PipelineStageVersion[]
+  jobPostings JobPosting[]
+
+  @@unique([pipelineId, version])
+  @@index([pipelineId])
+}
+
+model PipelineStageVersion {
+  id                String @id @default(cuid())
+  pipelineVersionId String
+  name              String
+  order             Int
+
+  pipelineVersion PipelineVersion   @relation(fields: [pipelineVersionId], references: [id], onDelete: Cascade)
+  questions       QuestionVersion[]
+
+  @@unique([pipelineVersionId, order])
+  @@index([pipelineVersionId])
+}
+
+model QuestionVersion {
+  id                     String       @id @default(cuid())
+  pipelineStageVersionId String
+  question               String
+  type                   QuestionType
+  order                  Int
+  required               Boolean      @default(true)
+  createdAt              DateTime     @default(now())
+
+  pipelineStageVersion PipelineStageVersion @relation(fields: [pipelineStageVersionId], references: [id], onDelete: Cascade)
+
+  options        QuestionOptionVersion[]
+  rubricCriteria RubricCriterionVersion[]
+
+  @@unique([pipelineStageVersionId, order])
+  @@index([pipelineStageVersionId])
+}
+
+model QuestionOptionVersion {
+  id                String   @id @default(cuid())
+  questionVersionId String
+  text              String
+  order             Int
+  createdAt         DateTime @default(now())
+
+  questionVersion QuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionVersionId, order])
+  @@index([questionVersionId])
+}
+
+model RubricCriterionVersion {
+  id                String   @id @default(cuid())
+  questionVersionId String
+  name              String
+  description       String?
+  maxScore          Int
+  createdAt         DateTime @default(now())
+
+  questionVersion QuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
+
+  @@index([questionVersionId])
 }
