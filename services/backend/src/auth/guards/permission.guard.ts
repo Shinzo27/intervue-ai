@@ -9,6 +9,7 @@ import { Permission } from '../enums/permission.enum';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { ROLE_PERMISSIONS } from '../../config/role-permission';
 import { auth } from '../auth';
+import { fromNodeHeaders } from 'better-auth/node';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -27,7 +28,7 @@ export class PermissionsGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
 
     const session = await auth.api.getSession({
-      headers: request.headers,
+      headers: fromNodeHeaders(request.headers),
     });
 
     if (!session) {
@@ -41,7 +42,7 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const member = await auth.api.getActiveMember({
-      headers: request.headers,
+      headers: fromNodeHeaders(request.headers),
     });
 
     if (!member) {

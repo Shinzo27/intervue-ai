@@ -7,6 +7,8 @@ import { auth } from './auth/auth';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware';
 import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
+import { PipelinesModule } from './pipelines/pipelines.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -86,6 +88,8 @@ import { MeModule } from './me/me.module';
     HealthModule,
     AuthModule.forRoot({ auth }),
     MeModule,
+    PipelinesModule,
+    PrismaModule,
   ],
 })
 export class AppModule implements NestModule {
