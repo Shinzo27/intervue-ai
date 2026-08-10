@@ -4,6 +4,6 @@ import { PipelineStagesService } from './pipeline-stages.service';
 
 @Module({
   controllers: [PipelineStagesController],
-  providers: [PipelineStagesService]
+  providers: [PipelineStagesService],
 })
 export class PipelineStagesModule {}

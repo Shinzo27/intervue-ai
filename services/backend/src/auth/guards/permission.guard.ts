@@ -11,6 +11,8 @@ import { ROLE_PERMISSIONS } from '../../config/role-permission';
 import { auth } from '../auth';
 import { fromNodeHeaders } from 'better-auth/node';
 
+import { Request } from 'express';
+
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -25,7 +27,7 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
 
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(request.headers),
