@@ -11,6 +11,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PipelineStagesModule } from './pipeline-stages/pipeline-stages.module';
 import { QuestionsModule } from './questions/questions.module';
+import { JobPostingsModule } from './job-postings/job-postings.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { QuestionsModule } from './questions/questions.module';
     PrismaModule,
     PipelineStagesModule,
     QuestionsModule,
+    JobPostingsModule,
   ],
 })
 export class AppModule implements NestModule {
