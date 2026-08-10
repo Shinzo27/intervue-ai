@@ -10,6 +10,9 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { CreateQuestionOptionDto } from './dto/options/create-question-option.dto';
 import { UpdateQuestionOptionDto } from './dto/options/update-question-option.dto';
+import { CreateRubricCriterionDto } from './dto/rubrics/create-rubric-criterion.dto';
+import { UpdateRubricCriterionDto } from './dto/rubrics/update-rubric-criterion.dto';
+
 @Injectable()
 export class QuestionsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -307,6 +310,126 @@ export class QuestionsService {
 
     return {
       message: 'Question option deleted successfully',
+    };
+  }
+
+  async createRubric(
+    organizationId: string,
+    questionId: string,
+    dto: CreateRubricCriterionDto,
+  ) {
+    const question = await this.prisma.question.findFirst({
+      where: {
+        id: questionId,
+        pipelineStage: {
+          pipeline: {
+            organizationId,
+          },
+        },
+      },
+    });
+
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    return this.prisma.rubricCriterion.create({
+      data: {
+        name: dto.name,
+        description: dto.description,
+        maxScore: dto.maxScore,
+        questionId,
+      },
+    });
+  }
+
+  async findAllRubrics(organizationId: string, questionId: string) {
+    const question = await this.prisma.question.findFirst({
+      where: {
+        id: questionId,
+        pipelineStage: {
+          pipeline: {
+            organizationId,
+          },
+        },
+      },
+    });
+
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    return this.prisma.rubricCriterion.findMany({
+      where: {
+        questionId,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+  }
+
+  async findOneRubric(
+    organizationId: string,
+    questionId: string,
+    rubricId: string,
+  ) {
+    const rubric = await this.prisma.rubricCriterion.findFirst({
+      where: {
+        id: rubricId,
+        questionId,
+        question: {
+          pipelineStage: {
+            pipeline: {
+              organizationId,
+            },
+          },
+        },
+      },
+    });
+
+    if (!rubric) {
+      throw new NotFoundException('Rubric criterion not found');
+    }
+
+    return rubric;
+  }
+
+  async updateRubric(
+    organizationId: string,
+    questionId: string,
+    rubricId: string,
+    dto: UpdateRubricCriterionDto,
+  ) {
+    await this.findOneRubric(organizationId, questionId, rubricId);
+
+    return this.prisma.rubricCriterion.update({
+      where: {
+        id: rubricId,
+      },
+      data: {
+        name: dto.name,
+        description: dto.description,
+        maxScore: dto.maxScore,
+      },
+    });
+  }
+
+  async removeRubric(
+    organizationId: string,
+    questionId: string,
+    rubricId: string,
+  ) {
+    await this.findOneRubric(organizationId, questionId, rubricId);
+
+    await this.prisma.rubricCriterion.delete({
+      where: {
+        id: rubricId,
+      },
+    });
+
+    return {
+      message: 'Rubric criterion deleted successfully',
     };
   }
 }

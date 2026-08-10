@@ -20,6 +20,8 @@ import { PermissionsGuard } from '../auth/guards/permission.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/enums/permission.enum';
 import { getAuthContext } from '../auth/utils/session';
+import { CreateRubricCriterionDto } from './dto/rubrics/create-rubric-criterion.dto';
+import { UpdateRubricCriterionDto } from './dto/rubrics/update-rubric-criterion.dto';
 
 @Controller('stages/:stageId/questions')
 @UseGuards(PermissionsGuard)
@@ -161,6 +163,79 @@ export class QuestionsController {
       organizationId,
       questionId,
       optionId,
+    );
+  }
+
+  @Post(':questionId/rubrics')
+  @RequirePermissions(Permission.PIPELINE_UPDATE)
+  async createRubric(
+    @Req() request: express.Request,
+    @Param('questionId') questionId: string,
+    @Body() dto: CreateRubricCriterionDto,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.questionsService.createRubric(organizationId, questionId, dto);
+  }
+
+  @Get(':questionId/rubrics')
+  @RequirePermissions(Permission.PIPELINE_VIEW)
+  async findAllRubrics(
+    @Req() request: express.Request,
+    @Param('questionId') questionId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.questionsService.findAllRubrics(organizationId, questionId);
+  }
+
+  @Get(':questionId/rubrics/:rubricId')
+  @RequirePermissions(Permission.PIPELINE_VIEW)
+  async findOneRubric(
+    @Req() request: express.Request,
+    @Param('questionId') questionId: string,
+    @Param('rubricId') rubricId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.questionsService.findOneRubric(
+      organizationId,
+      questionId,
+      rubricId,
+    );
+  }
+
+  @Patch(':questionId/rubrics/:rubricId')
+  @RequirePermissions(Permission.PIPELINE_UPDATE)
+  async updateRubric(
+    @Req() request: express.Request,
+    @Param('questionId') questionId: string,
+    @Param('rubricId') rubricId: string,
+    @Body() dto: UpdateRubricCriterionDto,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.questionsService.updateRubric(
+      organizationId,
+      questionId,
+      rubricId,
+      dto,
+    );
+  }
+
+  @Delete(':questionId/rubrics/:rubricId')
+  @RequirePermissions(Permission.PIPELINE_UPDATE)
+  async removeRubric(
+    @Req() request: express.Request,
+    @Param('questionId') questionId: string,
+    @Param('rubricId') rubricId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.questionsService.removeRubric(
+      organizationId,
+      questionId,
+      rubricId,
     );
   }
 }
