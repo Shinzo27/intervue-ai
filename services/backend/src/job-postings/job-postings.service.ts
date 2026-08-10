@@ -99,7 +99,27 @@ export class JobPostingsService {
             },
           },
         },
-        pipelineVersion: true,
+
+        pipelineVersion: {
+          include: {
+            stages: {
+              include: {
+                questions: {
+                  include: {
+                    options: true,
+                    rubricCriteria: true,
+                  },
+                  orderBy: {
+                    order: 'asc',
+                  },
+                },
+              },
+              orderBy: {
+                order: 'asc',
+              },
+            },
+          },
+        },
       },
     });
 
@@ -107,7 +127,21 @@ export class JobPostingsService {
       throw new NotFoundException('Job posting not found');
     }
 
-    return jobPosting;
+    // Published job → immutable snapshot
+    if (jobPosting.status === 'PUBLISHED') {
+      return {
+        ...jobPosting,
+        pipeline: null,
+        pipelineVersion: jobPosting.pipelineVersion,
+      };
+    }
+
+    // Draft job → current pipeline template
+    return {
+      ...jobPosting,
+      pipelineVersion: null,
+      pipeline: jobPosting.pipeline,
+    };
   }
 
   async update(
@@ -156,5 +190,200 @@ export class JobPostingsService {
     return {
       message: 'Job posting deleted successfully',
     };
+  }
+
+  async publish(organizationId: string, jobPostingId: string) {
+    const jobPosting = await this.prisma.jobPosting.findFirst({
+      where: {
+        id: jobPostingId,
+        organizationId,
+      },
+      include: {
+        pipeline: {
+          include: {
+            stages: {
+              include: {
+                questions: {
+                  include: {
+                    options: true,
+                    rubricCriteria: true,
+                  },
+                  orderBy: {
+                    order: 'asc',
+                  },
+                },
+              },
+              orderBy: {
+                order: 'asc',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // -------------------------
+    // VALIDATION
+    // -------------------------
+
+    if (!jobPosting) {
+      throw new NotFoundException('Job posting not found');
+    }
+
+    if (jobPosting.status !== 'DRAFT') {
+      throw new ConflictException('Only draft job postings can be published');
+    }
+
+    if (!jobPosting.pipeline) {
+      throw new ConflictException('A pipeline is required before publishing');
+    }
+
+    if (jobPosting.pipeline.status !== 'ACTIVE') {
+      throw new ConflictException(
+        'Cannot publish a job using an inactive pipeline',
+      );
+    }
+
+    if (jobPosting.pipeline.stages.length === 0) {
+      throw new ConflictException(
+        'Pipeline must contain at least one stage before publishing',
+      );
+    }
+
+    for (const stage of jobPosting.pipeline.stages) {
+      for (const question of stage.questions) {
+        if (question.type === 'MCQ' && question.options.length === 0) {
+          throw new ConflictException(
+            `MCQ question "${question.question}" must have at least one option`,
+          );
+        }
+      }
+    }
+
+    // -------------------------
+    // GET NEXT VERSION
+    // -------------------------
+
+    const latestVersion = await this.prisma.pipelineVersion.findFirst({
+      where: {
+        pipelineId: jobPosting.pipeline.id,
+      },
+      orderBy: {
+        version: 'desc',
+      },
+    });
+
+    const nextVersion = (latestVersion?.version ?? 0) + 1;
+
+    // -------------------------
+    // CREATE SNAPSHOT
+    // -------------------------
+
+    return this.prisma.$transaction(async (tx) => {
+      const pipelineVersion = await tx.pipelineVersion.create({
+        data: {
+          pipelineId: jobPosting.pipeline!.id,
+          version: nextVersion,
+          status: 'PUBLISHED',
+        },
+      });
+
+      // -------------------------
+      // COPY STAGES
+      // -------------------------
+
+      for (const stage of jobPosting.pipeline!.stages) {
+        const stageVersion = await tx.pipelineStageVersion.create({
+          data: {
+            pipelineVersionId: pipelineVersion.id,
+            name: stage.name,
+            order: stage.order,
+          },
+        });
+
+        // -------------------------
+        // COPY QUESTIONS
+        // -------------------------
+
+        for (const question of stage.questions) {
+          const questionVersion = await tx.questionVersion.create({
+            data: {
+              pipelineStageVersionId: stageVersion.id,
+              question: question.question,
+              type: question.type,
+              order: question.order,
+              required: question.required,
+            },
+          });
+
+          // -------------------------
+          // COPY OPTIONS
+          // -------------------------
+
+          for (const option of question.options) {
+            await tx.questionOptionVersion.create({
+              data: {
+                questionVersionId: questionVersion.id,
+                text: option.text,
+                order: option.order,
+              },
+            });
+          }
+
+          // -------------------------
+          // COPY RUBRICS
+          // -------------------------
+
+          for (const rubric of question.rubricCriteria) {
+            await tx.rubricCriterionVersion.create({
+              data: {
+                questionVersionId: questionVersion.id,
+                name: rubric.name,
+                description: rubric.description,
+                maxScore: rubric.maxScore,
+              },
+            });
+          }
+        }
+      }
+
+      // -------------------------
+      // PUBLISH JOB
+      // -------------------------
+
+      const publishedJob = await tx.jobPosting.update({
+        where: {
+          id: jobPostingId,
+        },
+        data: {
+          status: 'PUBLISHED',
+          pipelineVersionId: pipelineVersion.id,
+        },
+        include: {
+          pipelineVersion: {
+            include: {
+              stages: {
+                include: {
+                  questions: {
+                    include: {
+                      options: true,
+                      rubricCriteria: true,
+                    },
+                    orderBy: {
+                      order: 'asc',
+                    },
+                  },
+                },
+                orderBy: {
+                  order: 'asc',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return publishedJob;
+    });
   }
 }

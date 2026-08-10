@@ -40,7 +40,7 @@ export class JobPostingsController {
   }
 
   @Get()
-  @RequirePermissions(Permission.PIPELINE_VIEW)
+  @RequirePermissions(Permission.JOBS_VIEW)
   async findAll(@Req() request: express.Request) {
     const { organizationId } = await getAuthContext(request);
 
@@ -48,7 +48,7 @@ export class JobPostingsController {
   }
 
   @Get(':jobPostingId')
-  @RequirePermissions(Permission.PIPELINE_VIEW)
+  @RequirePermissions(Permission.JOBS_VIEW)
   async findOne(
     @Req() request: express.Request,
     @Param('jobPostingId') jobPostingId: string,
@@ -79,5 +79,16 @@ export class JobPostingsController {
     const { organizationId } = await getAuthContext(request);
 
     return this.jobPostingsService.remove(organizationId, jobPostingId);
+  }
+
+  @Post(':jobPostingId/publish')
+  @RequirePermissions(Permission.JOBS_PUBLISH)
+  async publish(
+    @Req() request: express.Request,
+    @Param('jobPostingId') jobPostingId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.jobPostingsService.publish(organizationId, jobPostingId);
   }
 }

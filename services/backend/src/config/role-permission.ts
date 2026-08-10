@@ -9,6 +9,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.JOBS_CREATE,
     Permission.JOBS_UPDATE,
     Permission.JOBS_DELETE,
+    Permission.JOBS_PUBLISH,
+    Permission.JOBS_VIEW,
 
     Permission.PIPELINE_CREATE,
     Permission.PIPELINE_UPDATE,
@@ -26,6 +28,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.JOBS_CREATE,
     Permission.JOBS_UPDATE,
     Permission.JOBS_DELETE,
+    Permission.JOBS_PUBLISH,
+    Permission.JOBS_VIEW,
 
     Permission.PIPELINE_CREATE,
     Permission.PIPELINE_UPDATE,
@@ -40,6 +44,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [Role.RECRUITER]: [
     Permission.JOBS_CREATE,
     Permission.JOBS_UPDATE,
+    Permission.JOBS_PUBLISH,
+    Permission.JOBS_VIEW,
 
     Permission.PIPELINE_CREATE,
     Permission.PIPELINE_UPDATE,

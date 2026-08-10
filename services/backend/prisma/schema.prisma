@@ -247,7 +247,8 @@ model PipelineVersion {
   publishedAt DateTime              @default(now())
   createdAt   DateTime              @default(now())
 
-  pipeline    Pipeline               @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
   stages      PipelineStageVersion[]
   jobPostings JobPosting[]
 
@@ -261,8 +262,9 @@ model PipelineStageVersion {
   name              String
   order             Int
 
-  pipelineVersion PipelineVersion   @relation(fields: [pipelineVersionId], references: [id], onDelete: Cascade)
-  questions       QuestionVersion[]
+  pipelineVersion PipelineVersion @relation(fields: [pipelineVersionId], references: [id], onDelete: Cascade)
+
+  questions QuestionVersion[]
 
   @@unique([pipelineVersionId, order])
   @@index([pipelineVersionId])
@@ -275,7 +277,6 @@ model QuestionVersion {
   type                   QuestionType
   order                  Int
   required               Boolean      @default(true)
-  createdAt              DateTime     @default(now())
 
   pipelineStageVersion PipelineStageVersion @relation(fields: [pipelineStageVersionId], references: [id], onDelete: Cascade)
 
@@ -287,11 +288,10 @@ model QuestionVersion {
 }
 
 model QuestionOptionVersion {
-  id                String   @id @default(cuid())
+  id                String @id @default(cuid())
   questionVersionId String
   text              String
   order             Int
-  createdAt         DateTime @default(now())
 
   questionVersion QuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
 
@@ -300,12 +300,11 @@ model QuestionOptionVersion {
 }
 
 model RubricCriterionVersion {
-  id                String   @id @default(cuid())
+  id                String  @id @default(cuid())
   questionVersionId String
   name              String
   description       String?
   maxScore          Int
-  createdAt         DateTime @default(now())
 
   questionVersion QuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
 
