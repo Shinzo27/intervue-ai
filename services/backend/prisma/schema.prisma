@@ -143,6 +143,7 @@ model JobPosting {
   @@index([organizationId])
   @@index([createdById])
   @@index([pipelineId])
+  applications Application[]
 }
 
 enum PipelineStatus {
@@ -309,4 +310,81 @@ model RubricCriterionVersion {
   questionVersion QuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
 
   @@index([questionVersionId])
+}
+
+model Candidate {
+  id             String @id @default(uuid())
+  organizationId String
+
+  firstName String
+  lastName  String?
+  email     String
+  phone     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applications Application[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+}
+
+model Application {
+  id             String @id @default(uuid())
+  organizationId String
+
+  candidateId  String
+  jobPostingId String
+
+  status ApplicationStatus @default(APPLIED)
+
+  appliedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidate  Candidate  @relation(fields: [candidateId], references: [id])
+  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id])
+
+  interview Interview?
+
+  @@unique([candidateId, jobPostingId])
+  @@index([organizationId])
+  @@index([jobPostingId])
+  @@index([candidateId])
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SCREENING
+  INTERVIEW
+  SELECTED
+  REJECTED
+  WITHDRAWN
+}
+
+model Interview {
+  id String @id @default(uuid())
+
+  applicationId String @unique
+
+  accessToken String          @unique
+  status      InterviewStatus @default(NOT_STARTED)
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application   Application @relation(fields: [applicationId], references: [id])
+
+  @@index([accessToken])
+}
+
+enum InterviewStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
 }
