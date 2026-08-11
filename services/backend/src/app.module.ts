@@ -13,6 +13,7 @@ import { PipelineStagesModule } from './pipeline-stages/pipeline-stages.module';
 import { QuestionsModule } from './questions/questions.module';
 import { JobPostingsModule } from './job-postings/job-postings.module';
 import { CandidateModule } from './candidate/candidate.module';
+import { ApplicationModule } from './application/application.module';
 
 @Module({
   imports: [
@@ -98,6 +99,7 @@ import { CandidateModule } from './candidate/candidate.module';
     QuestionsModule,
     JobPostingsModule,
     CandidateModule,
+    ApplicationModule,
   ],
 })
 export class AppModule implements NestModule {
