@@ -47,7 +47,31 @@ export class InterviewService {
         application: {
           include: {
             candidate: true,
-            jobPosting: true,
+
+            jobPosting: {
+              include: {
+                pipelineVersion: {
+                  include: {
+                    stages: {
+                      include: {
+                        questions: {
+                          include: {
+                            options: true,
+                            rubricCriteria: true,
+                          },
+                          orderBy: {
+                            order: 'asc',
+                          },
+                        },
+                      },
+                      orderBy: {
+                        order: 'asc',
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
