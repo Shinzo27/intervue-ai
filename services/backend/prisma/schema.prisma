@@ -139,11 +139,11 @@ model JobPosting {
   createdBy         User             @relation(fields: [createdById], references: [id])
   pipeline          Pipeline?        @relation(fields: [pipelineId], references: [id])
   pipelineVersion   PipelineVersion? @relation(fields: [pipelineVersionId], references: [id])
+  applications      Application[]
 
   @@index([organizationId])
   @@index([createdById])
   @@index([pipelineId])
-  applications Application[]
 }
 
 enum PipelineStatus {
@@ -319,14 +319,12 @@ model Candidate {
   firstName String
   lastName  String?
   email     String
-  phone     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  applications Application[]
+  application Application?
 
-  @@unique([organizationId, email])
   @@index([organizationId])
 }
 
@@ -334,57 +332,34 @@ model Application {
   id             String @id @default(uuid())
   organizationId String
 
-  candidateId  String
+  candidateId  String @unique
   jobPostingId String
 
-  status ApplicationStatus @default(APPLIED)
+  inviteToken    String   @unique
+  tokenExpiresAt DateTime
 
-  appliedAt DateTime @default(now())
+  status ApplicationStatus @default(INVITED)
+
+  invitedAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  decidedAt   DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   candidate  Candidate  @relation(fields: [candidateId], references: [id])
   jobPosting JobPosting @relation(fields: [jobPostingId], references: [id])
 
-  interview Interview?
-
-  @@unique([candidateId, jobPostingId])
   @@index([organizationId])
   @@index([jobPostingId])
-  @@index([candidateId])
+  @@index([inviteToken])
 }
 
 enum ApplicationStatus {
-  APPLIED
-  SCREENING
-  INTERVIEW
-  SELECTED
-  REJECTED
-  WITHDRAWN
-}
-
-model Interview {
-  id String @id @default(uuid())
-
-  applicationId String @unique
-
-  accessToken String          @unique
-  status      InterviewStatus @default(NOT_STARTED)
-
-  startedAt   DateTime?
-  completedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  application   Application @relation(fields: [applicationId], references: [id])
-
-  @@index([accessToken])
-}
-
-enum InterviewStatus {
-  NOT_STARTED
+  INVITED
+  STARTED
   IN_PROGRESS
   COMPLETED
-  EXPIRED
+  DECIDED
 }
