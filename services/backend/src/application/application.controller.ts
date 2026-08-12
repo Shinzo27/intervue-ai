@@ -3,6 +3,7 @@ import { ApplicationService } from './application.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import express from 'express';
 import { getAuthContext } from '../auth/utils/session';
+import { InviteCandidateDto } from './dto/invite-candidate.dto';
 
 @Controller('applications')
 export class ApplicationController {
@@ -27,5 +28,14 @@ export class ApplicationController {
   async findOne(@Req() request: express.Request, @Param('id') id: string) {
     const { organizationId } = await getAuthContext(request);
     return this.applicationService.findOne(organizationId, id);
+  }
+
+  @Post('invite')
+  async inviteCandidate(
+    @Req() request: express.Request,
+    @Body() dto: InviteCandidateDto,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+    return this.applicationService.inviteCandidate(organizationId, dto);
   }
 }

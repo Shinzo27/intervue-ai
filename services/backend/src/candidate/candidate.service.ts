@@ -14,7 +14,6 @@ export class CandidateService {
         firstName: dto.firstName,
         lastName: dto.lastName,
         email: dto.email,
-        phone: dto.phone,
       },
     });
   }
@@ -34,7 +33,7 @@ export class CandidateService {
     organizationId: string,
     id: string,
   ): Promise<Prisma.CandidateGetPayload<{
-    include: { applications: true };
+    include: { application: true };
   }> | null> {
     return this.prisma.candidate.findFirst({
       where: {
@@ -42,7 +41,7 @@ export class CandidateService {
         organizationId,
       },
       include: {
-        applications: true,
+        application: true,
       },
     });
   }

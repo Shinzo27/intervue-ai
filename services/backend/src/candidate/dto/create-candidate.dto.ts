@@ -10,8 +10,4 @@ export class CreateCandidateDto {
 
   @IsEmail()
   email: string;
-
-  @IsOptional()
-  @IsString()
-  phone?: string;
 }

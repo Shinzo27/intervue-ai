@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -18,56 +17,34 @@ export class InterviewService {
       throw new NotFoundException('Application not found');
     }
 
-    const existingInterview = await this.prisma.interview.findUnique({
-      where: {
-        applicationId,
-      },
-    });
-
-    if (existingInterview) {
-      return existingInterview;
-    }
-
-    const accessToken = randomBytes(32).toString('hex');
-
-    return this.prisma.interview.create({
-      data: {
-        applicationId,
-        accessToken,
-      },
-    });
+    return application;
   }
 
-  async getByToken(accessToken: string) {
-    const interview = await this.prisma.interview.findUnique({
+  async getByToken(inviteToken: string) {
+    const application = await this.prisma.application.findUnique({
       where: {
-        accessToken,
+        inviteToken,
       },
       include: {
-        application: {
+        candidate: true,
+        jobPosting: {
           include: {
-            candidate: true,
-
-            jobPosting: {
+            pipelineVersion: {
               include: {
-                pipelineVersion: {
+                stages: {
                   include: {
-                    stages: {
+                    questions: {
                       include: {
-                        questions: {
-                          include: {
-                            options: true,
-                            rubricCriteria: true,
-                          },
-                          orderBy: {
-                            order: 'asc',
-                          },
-                        },
+                        options: true,
+                        rubricCriteria: true,
                       },
                       orderBy: {
                         order: 'asc',
                       },
                     },
+                  },
+                  orderBy: {
+                    order: 'asc',
                   },
                 },
               },
@@ -77,10 +54,10 @@ export class InterviewService {
       },
     });
 
-    if (!interview) {
+    if (!application) {
       throw new NotFoundException('Invalid interview link');
     }
 
-    return interview;
+    return application;
   }
 }
