@@ -2,6 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
+export interface CandidateInvitationJobData {
+  applicationId: string;
+  candidateEmail: string;
+  candidateName: string;
+  inviteToken: string;
+}
+
 @Injectable()
 export class CandidateInvitationQueue {
   constructor(
@@ -9,12 +16,7 @@ export class CandidateInvitationQueue {
     private readonly queue: Queue,
   ) {}
 
-  async addInvitationJob(data: {
-    applicationId: string;
-    candidateEmail: string;
-    candidateName: string;
-    inviteToken: string;
-  }) {
+  async addInvitationJob(data: CandidateInvitationJobData) {
     return this.queue.add('send-invitation', data);
   }
 }

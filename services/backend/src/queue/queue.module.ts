@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { CandidateInvitationQueue } from './candidate-invitation.queue';
+import { CandidateInvitationProcessor } from './candidate-invitation.processor';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { CandidateInvitationQueue } from './candidate-invitation.queue';
     }),
   ],
 
-  providers: [CandidateInvitationQueue],
+  providers: [CandidateInvitationQueue, CandidateInvitationProcessor],
 
   exports: [CandidateInvitationQueue],
 })
