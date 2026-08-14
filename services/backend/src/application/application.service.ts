@@ -7,10 +7,14 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { InviteCandidateDto } from './dto/invite-candidate.dto';
+import { CandidateInvitationQueue } from '../queue/candidate-invitation.queue';
 
 @Injectable()
 export class ApplicationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly candidateInvitationQueue: CandidateInvitationQueue,
+  ) {}
 
   async create(organizationId: string, dto: CreateApplicationDto) {
     const candidate = await this.prisma.candidate.findFirst({
@@ -173,6 +177,13 @@ export class ApplicationService {
       });
 
       return application;
+    });
+
+    await this.candidateInvitationQueue.addInvitationJob({
+      applicationId: result.id,
+      candidateEmail: result.candidate.email,
+      candidateName: `${result.candidate.firstName} ${result.candidate.lastName}`,
+      inviteToken: result.inviteToken,
     });
 
     return result;

@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { Candidate, Prisma } from '@prisma/client';
@@ -42,6 +46,32 @@ export class CandidateService {
       },
       include: {
         application: true,
+      },
+    });
+  }
+
+  async startApplication(applicationId: string) {
+    const application = await this.prisma.application.findUnique({
+      where: {
+        id: applicationId,
+      },
+    });
+
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    if (application.status !== 'INVITED') {
+      throw new BadRequestException('Application has already been started');
+    }
+
+    return this.prisma.application.update({
+      where: {
+        id: applicationId,
+      },
+      data: {
+        status: 'STARTED',
+        startedAt: new Date(),
       },
     });
   }
