@@ -37,6 +37,13 @@ export function Footer() {
           >
             Docs
           </a>
+
+          <a
+            href="#demo"
+            className="text-[12px] text-(--text-muted) transition-colors duration-200 hover:text-(--text-primary)"
+          >
+            Request a demo
+          </a>
         </nav>
 
         {/* Copyright */}

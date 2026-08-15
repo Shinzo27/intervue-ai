@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Badge } from "@repo/ui/badge";
+import { Button } from "@repo/ui/button";
+import { MonoLabel } from "@repo/ui/mono-label";
 
 const plans = [
   {
@@ -53,9 +56,7 @@ export function Pricing() {
           transition={{ duration: 0.55, ease: "easeOut" }}
           className="flex w-full flex-col items-center text-center"
         >
-          <div className="font-mono text-[11px] tracking-[0.08em] text-(--accent)">
-            PRICING
-          </div>
+          <MonoLabel accent>PRICING</MonoLabel>
 
           <h2 className="mx-auto mt-3 max-w-180 text-[26px] font-medium leading-tight tracking-tight text-(--text-primary) md:text-[30px]">
             Simple pricing for structured screening.
@@ -113,9 +114,7 @@ export function Pricing() {
                 ease: "easeOut",
               }}
               className={`flex flex-col rounded-xl border bg-(--surface) p-6 transition-all duration-200 ease-out hover:-translate-y-0.5 ${
-                plan.recommended
-                  ? "border-(--accent)"
-                  : "border-(--border)"
+                plan.recommended ? "border-(--accent)" : "border-(--border)"
               }`}
             >
               {/* Plan header */}
@@ -131,9 +130,7 @@ export function Pricing() {
                 </div>
 
                 {plan.recommended && (
-                  <span className="shrink-0 rounded-md bg-(--accent) px-2 py-1 font-mono text-[9px] leading-none text-(--accent-text)">
-                    RECOMMENDED
-                  </span>
+                  <Badge variant="accent">RECOMMENDED</Badge>
                 )}
               </div>
 
@@ -173,7 +170,7 @@ export function Pricing() {
 
               {/* CTA */}
               <div className="mt-auto pt-8">
-                <button
+                <Button
                   type="button"
                   className={`w-full rounded-lg px-4 py-3 text-[13px] transition-all duration-200 ease-out hover:-translate-y-px ${
                     plan.recommended
@@ -182,7 +179,7 @@ export function Pricing() {
                   }`}
                 >
                   Request a demo
-                </button>
+                </Button>
               </div>
             </motion.article>
           ))}

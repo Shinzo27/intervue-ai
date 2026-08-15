@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { MonoLabel } from "@repo/ui/mono-label";
 
 export function Hero() {
   return (
@@ -11,9 +12,7 @@ export function Hero() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="mx-auto max-w-140 text-center"
       >
-        <div className="mb-6 inline-flex items-center rounded-md border border-[rgba(245,166,35,0.15)] bg-[rgba(245,166,35,0.08)] px-2.5 py-1.5 font-mono text-[11px] tracking-wide text-(--accent)">
-          MCP-NATIVE SCREENING
-        </div>
+        <MonoLabel accent>MCP-NATIVE SCREENING</MonoLabel>
 
         <h1 className="text-[34px] font-medium leading-[1.2] tracking-[-0.03em] text-(--text-primary) md:text-[36px]">
           Screening interviews
@@ -37,7 +36,7 @@ export function Hero() {
           </motion.a>
 
           <motion.a
-            href="#scoring"
+            href="#differentiator"
             whileHover={{ y: -1 }}
             transition={{ duration: 0.2 }}
             className="rounded-lg border border-(--border) px-5 py-2.5 text-[13px] text-(--text-secondary) transition-colors duration-200 hover:text-(--text-primary)"

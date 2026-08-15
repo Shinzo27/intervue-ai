@@ -6,7 +6,7 @@ export function Navbar() {
   return (
     <header className="border-b border-(--border)">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <a href="#" className="flex items-center gap-2.5">
+        <a href="" className="flex items-center gap-2.5">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-(--accent)">
             <span className="h-2.5 w-2.5 rounded-[3px] bg-(--accent-text)" />
           </span>
@@ -32,7 +32,7 @@ export function Navbar() {
           </a>
 
           <a
-            href="#docs"
+            href="/docs"
             className="text-[13px] text-(--text-secondary) transition-colors duration-200 hover:text-(--text-primary)"
           >
             Docs

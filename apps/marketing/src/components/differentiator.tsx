@@ -1,10 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { MonoLabel } from "@repo/ui/mono-label";
 
 export function Differentiator() {
   return (
-    <section className="border-y border-(--border-subtle) bg-(--surface) px-6 py-20 md:py-28">
+    <section
+      id="differentiator"
+      className="border-y border-(--border-subtle) bg-(--surface) px-6 py-20 md:py-28"
+    >
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -12,8 +16,8 @@ export function Differentiator() {
         transition={{ duration: 0.55, ease: "easeOut" }}
         className="mx-auto max-w-170 text-center"
       >
-        <div className="mb-4 font-mono text-[11px] text-(--accent)">
-          WHY INTERVUE
+        <div className="mb-4">
+          <MonoLabel accent>WHY INTERVUE</MonoLabel>
         </div>
 
         <h2 className="text-[24px] font-medium leading-[1.3] tracking-[-0.02em] text-(--text-primary) md:text-[28px]">
@@ -21,10 +25,10 @@ export function Differentiator() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-150 text-[14px] leading-6 text-(--text-secondary)">
-          The model that conducts the interview isn&apos;t the model that decides
-          how well it went. A separate evaluator checks every response against
-          the predefined rubric, keeping the reasoning isolated and the final
-          decision auditable.
+          The model that conducts the interview isn&apos;t the model that
+          decides how well it went. A separate evaluator checks every response
+          against the predefined rubric, keeping the reasoning isolated and the
+          final decision auditable.
         </p>
 
         <div className="mx-auto mt-8 flex max-w-125 flex-wrap items-center justify-center gap-2">
