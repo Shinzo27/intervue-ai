@@ -7,19 +7,20 @@ datasource db {
 }
 
 model User {
-  id            String       @id
-  name          String
-  email         String       @unique
-  emailVerified Boolean      @default(false)
-  image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  accounts      Account[]
-  invitations   Invitation[]
-  members       Member[]
-  sessions      Session[]
-  jobPostings   JobPosting[]
-  pipelines     Pipeline[]
+  id                String             @id
+  name              String
+  email             String             @unique
+  emailVerified     Boolean            @default(false)
+  image             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  accounts          Account[]
+  invitations       Invitation[]
+  members           Member[]
+  sessions          Session[]
+  jobPostings       JobPosting[]
+  pipelines         Pipeline[]
+  decisionOverrides DecisionOverride[]
 
   @@map("user")
 }
@@ -83,6 +84,7 @@ model Organization {
   members     Member[]
   jobPostings JobPosting[]
   pipelines   Pipeline[]
+  auditLogs   AuditLog[]
 
   @@map("organization")
 }
@@ -265,7 +267,8 @@ model PipelineStageVersion {
 
   pipelineVersion PipelineVersion @relation(fields: [pipelineVersionId], references: [id], onDelete: Cascade)
 
-  questions QuestionVersion[]
+  questions           QuestionVersion[]
+  currentApplications Application[]     @relation("ApplicationCurrentStage")
 
   @@unique([pipelineVersionId, order])
   @@index([pipelineVersionId])
@@ -281,8 +284,10 @@ model QuestionVersion {
 
   pipelineStageVersion PipelineStageVersion @relation(fields: [pipelineStageVersionId], references: [id], onDelete: Cascade)
 
-  options        QuestionOptionVersion[]
-  rubricCriteria RubricCriterionVersion[]
+  options             QuestionOptionVersion[]
+  rubricCriteria      RubricCriterionVersion[]
+  currentApplications Application[]            @relation("ApplicationCurrentQuestion")
+  scores              Score[]
 
   @@unique([pipelineStageVersionId, order])
   @@index([pipelineStageVersionId])
@@ -307,7 +312,8 @@ model RubricCriterionVersion {
   description       String?
   maxScore          Int
 
-  questionVersion QuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
+  questionVersion QuestionVersion  @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
+  criterionScores CriterionScore[]
 
   @@index([questionVersionId])
 }
@@ -345,15 +351,166 @@ model Application {
   completedAt DateTime?
   decidedAt   DateTime?
 
+  // Sprint 5: interview progress
+  currentStageVersionId    String?
+  currentQuestionVersionId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   candidate  Candidate  @relation(fields: [candidateId], references: [id])
   jobPosting JobPosting @relation(fields: [jobPostingId], references: [id])
 
+  currentStageVersion PipelineStageVersion? @relation("ApplicationCurrentStage", fields: [currentStageVersionId], references: [id])
+
+  currentQuestionVersion QuestionVersion? @relation("ApplicationCurrentQuestion", fields: [currentQuestionVersionId], references: [id])
+
+  conversationSession ConversationSession?
+  scores              Score[]
+  decision            Decision?
+
   @@index([organizationId])
   @@index([jobPostingId])
   @@index([inviteToken])
+  @@index([currentStageVersionId])
+  @@index([currentQuestionVersionId])
+}
+
+model ConversationSession {
+  id            String @id @default(uuid())
+  applicationId String @unique
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  @@index([applicationId])
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  sessionId String
+  role      MessageRole
+  content   String
+
+  createdAt DateTime @default(now())
+
+  session ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, createdAt])
+}
+
+model Score {
+  id                String @id @default(uuid())
+  applicationId     String
+  questionVersionId String
+
+  overallScore Int
+  maxScore     Int
+  reasoning    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  questionVersion QuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Cascade)
+
+  criterionScores CriterionScore[]
+
+  @@unique([applicationId, questionVersionId])
+  @@index([applicationId])
+  @@index([questionVersionId])
+}
+
+model CriterionScore {
+  id                       String @id @default(uuid())
+  scoreId                  String
+  rubricCriterionVersionId String
+
+  score     Int
+  reasoning String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scoreRecord Score @relation(fields: [scoreId], references: [id], onDelete: Cascade)
+
+  rubricCriterionVersion RubricCriterionVersion @relation(fields: [rubricCriterionVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([scoreId, rubricCriterionVersionId])
+  @@index([scoreId])
+  @@index([rubricCriterionVersionId])
+}
+
+model Decision {
+  id            String @id @default(uuid())
+  applicationId String @unique
+
+  outcome    DecisionOutcome
+  totalScore Int
+  maxScore   Int
+  reasoning  String?
+
+  decidedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  overrides DecisionOverride[]
+
+  @@index([applicationId])
+}
+
+model DecisionOverride {
+  id         String @id @default(uuid())
+  decisionId String
+
+  overriddenById String
+
+  previousOutcome DecisionOutcome
+  newOutcome      DecisionOutcome
+  reason          String
+
+  createdAt DateTime @default(now())
+
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  overriddenBy User @relation(fields: [overriddenById], references: [id])
+
+  @@index([decisionId])
+  @@index([overriddenById])
+}
+
+model AuditLog {
+  id             String @id @default(uuid())
+  organizationId String
+
+  actorType AuditActorType
+  actorId   String?
+
+  action     String
+  entityType String
+  entityId   String
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
 }
 
 enum ApplicationStatus {
@@ -362,4 +519,20 @@ enum ApplicationStatus {
   IN_PROGRESS
   COMPLETED
   DECIDED
+}
+
+enum MessageRole {
+  CANDIDATE
+  ASSISTANT
+}
+
+enum DecisionOutcome {
+  PASS
+  FAIL
+}
+
+enum AuditActorType {
+  USER
+  AI
+  SYSTEM
 }

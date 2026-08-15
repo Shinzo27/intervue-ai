@@ -16,6 +16,7 @@ import { CandidateModule } from './candidate/candidate.module';
 import { ApplicationModule } from './application/application.module';
 import { InterviewModule } from './interview/interview.module';
 import { QueueModule } from './queue/queue.module';
+import { InternalModule } from './internal/internal.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { QueueModule } from './queue/queue.module';
     ApplicationModule,
     InterviewModule,
     QueueModule,
+    InternalModule,
   ],
 })
 export class AppModule implements NestModule {
