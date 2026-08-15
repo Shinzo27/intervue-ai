@@ -172,14 +172,15 @@ model Pipeline {
 }
 
 model PipelineStage {
-  id         String     @id @default(cuid())
-  name       String
-  order      Int
-  pipelineId String
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  questions  Question[]
-  pipeline   Pipeline   @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  id              String           @id @default(cuid())
+  name            String
+  order           Int
+  pipelineId      String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  questions       Question[]
+  pipeline        Pipeline         @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  interviewStages InterviewStage[]
 
   @@unique([pipelineId, order])
   @@index([pipelineId])
@@ -204,6 +205,7 @@ model Question {
   pipelineStage  PipelineStage     @relation(fields: [pipelineStageId], references: [id], onDelete: Cascade)
   options        QuestionOption[]
   rubricCriteria RubricCriterion[]
+  answers        Answer[]
 
   @@unique([pipelineStageId, order])
   @@index([pipelineStageId])
@@ -368,6 +370,7 @@ model Application {
   conversationSession ConversationSession?
   scores              Score[]
   decision            Decision?
+  interviewSession    InterviewSession?
 
   @@index([organizationId])
   @@index([jobPostingId])
@@ -391,20 +394,6 @@ model ConversationSession {
   messages Message[]
 
   @@index([applicationId])
-}
-
-model Message {
-  id        String      @id @default(uuid())
-  sessionId String
-  role      MessageRole
-  content   String
-
-  createdAt DateTime @default(now())
-
-  session ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId])
-  @@index([sessionId, createdAt])
 }
 
 model Score {
@@ -535,4 +524,160 @@ enum AuditActorType {
   USER
   AI
   SYSTEM
+}
+
+enum InterviewSessionStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum InterviewStageStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum AnswerType {
+  TEXT
+  OPTION
+  TRANSCRIPT
+}
+
+enum EvaluationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model InterviewSession {
+  id            String                 @id @default(uuid())
+  applicationId String                 @unique
+  status        InterviewSessionStatus @default(NOT_STARTED)
+
+  currentStageId String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  stages        InterviewStage[]
+  conversations Conversation[]
+  answers       Answer[]
+  evaluations   AIEvaluation[]
+
+  currentStage InterviewStage? @relation("CurrentInterviewStage", fields: [currentStageId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+model InterviewStage {
+  id                 String  @id @default(uuid())
+  interviewSessionId String
+  pipelineStageId    String?
+
+  order  Int
+  status InterviewStageStatus @default(NOT_STARTED)
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  interviewSession InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
+
+  pipelineStage PipelineStage? @relation(fields: [pipelineStageId], references: [id], onDelete: SetNull)
+
+  answers Answer[]
+
+  currentForSessions InterviewSession[] @relation("CurrentInterviewStage")
+
+  @@unique([interviewSessionId, order])
+  @@index([interviewSessionId])
+}
+
+model Answer {
+  id                 String @id @default(uuid())
+  interviewSessionId String
+  interviewStageId   String
+  questionId         String
+
+  type    AnswerType
+  content String
+
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  interviewSession InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
+
+  interviewStage InterviewStage @relation(fields: [interviewStageId], references: [id], onDelete: Cascade)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  evaluations AIEvaluation[]
+
+  @@index([interviewSessionId])
+  @@index([interviewStageId])
+  @@index([questionId])
+}
+
+model Conversation {
+  id                 String @id @default(uuid())
+  interviewSessionId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  interviewSession InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  @@index([interviewSessionId])
+}
+
+model Message {
+  id             String @id @default(uuid())
+  conversationId String
+
+  role     MessageRole
+  content  String
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  conversation          Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationSession   ConversationSession? @relation(fields: [conversationSessionId], references: [id])
+  conversationSessionId String?
+
+  @@index([conversationId, createdAt])
+}
+
+model AIEvaluation {
+  id                 String @id @default(uuid())
+  interviewSessionId String
+  answerId           String
+
+  status EvaluationStatus @default(PENDING)
+
+  model     String?
+  score     Decimal? @db.Decimal(5, 2)
+  reasoning String?
+  result    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  interviewSession InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
+
+  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@index([interviewSessionId])
+  @@index([answerId])
+  @@index([status])
 }
