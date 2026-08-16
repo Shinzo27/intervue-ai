@@ -415,4 +415,51 @@ export class InterviewsService {
       },
     });
   }
+
+  async evaluateAnswer(interviewId: string, answerId: string) {
+    const answer = await this.prisma.answer.findFirst({
+      where: {
+        id: answerId,
+        interviewSessionId: interviewId,
+      },
+      include: {
+        questionVersion: {
+          include: {
+            rubricCriteria: true,
+          },
+        },
+      },
+    });
+
+    if (!answer) {
+      throw new NotFoundException('Answer not found');
+    }
+
+    const existingEvaluation = await this.prisma.aIEvaluation.findFirst({
+      where: {
+        answerId,
+      },
+    });
+
+    if (existingEvaluation) {
+      throw new BadRequestException('Answer has already been evaluated');
+    }
+
+    const evaluation = await this.prisma.aIEvaluation.create({
+      data: {
+        answerId: answer.id,
+        interviewSessionId: interviewId,
+        status: 'PENDING',
+      },
+    });
+
+    return {
+      evaluationId: evaluation.id,
+      answerId: answer.id,
+      status: evaluation.status,
+      question: answer.questionVersion.question,
+      answer: answer.content,
+      rubricCriteria: answer.questionVersion.rubricCriteria,
+    };
+  }
 }

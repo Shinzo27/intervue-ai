@@ -34,4 +34,12 @@ export class InterviewsController {
   ) {
     return this.interviewsService.submitAnswer(interviewId, dto);
   }
+
+  @Post(':interviewId/answers/:answerId/evaluate')
+  async evaluateAnswer(
+    @Param('interviewId') interviewId: string,
+    @Param('answerId') answerId: string,
+  ) {
+    return this.interviewsService.evaluateAnswer(interviewId, answerId);
+  }
 }
