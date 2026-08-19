@@ -501,6 +501,7 @@ model Conversation {
   interviewSession   InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
   messages           Message[]
 
+  @@unique([interviewSessionId])
   @@index([interviewSessionId])
 }
 

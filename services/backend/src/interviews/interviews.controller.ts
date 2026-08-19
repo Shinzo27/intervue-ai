@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { InterviewsService } from './interviews.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
+import { CreateMessageDto } from './dto/create-message.dto';
 
 @Controller('interviews')
 export class InterviewsController {
@@ -41,5 +42,23 @@ export class InterviewsController {
     @Param('answerId') answerId: string,
   ) {
     return this.interviewsService.evaluateAnswer(interviewId, answerId);
+  }
+
+  @Post(':interviewId/conversation')
+  async createConversation(@Param('interviewId') interviewId: string) {
+    return this.interviewsService.createConversation(interviewId);
+  }
+
+  @Post(':interviewId/conversation/messages')
+  async createMessage(
+    @Param('interviewId') interviewId: string,
+    @Body() dto: CreateMessageDto,
+  ) {
+    return this.interviewsService.createMessage(interviewId, dto);
+  }
+
+  @Get(':interviewId/conversation')
+  async getConversation(@Param('interviewId') interviewId: string) {
+    return this.interviewsService.getConversation(interviewId);
   }
 }
