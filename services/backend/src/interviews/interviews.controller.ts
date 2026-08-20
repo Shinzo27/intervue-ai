@@ -1,8 +1,12 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { InterviewsService } from './interviews.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { CreateDecisionDto } from './dto/create-decision.dto';
+import { OverrideDecisionDto } from './dto/override-decision.dto';
+import { getAuthContext } from 'src/auth/utils/session';
+import express from 'express';
 
 @Controller('interviews')
 export class InterviewsController {
@@ -60,5 +64,24 @@ export class InterviewsController {
   @Get(':interviewId/conversation')
   async getConversation(@Param('interviewId') interviewId: string) {
     return this.interviewsService.getConversation(interviewId);
+  }
+
+  @Post(':interviewId/decision')
+  async createDecision(
+    @Param('interviewId') interviewId: string,
+    @Body() dto: CreateDecisionDto,
+  ) {
+    return this.interviewsService.createDecision(interviewId, dto);
+  }
+
+  @Post(':interviewId/decision/override')
+  async overrideDecision(
+    @Req() request: express.Request,
+    @Param('interviewId') interviewId: string,
+    @Body() dto: OverrideDecisionDto,
+  ) {
+    const { userId } = await getAuthContext(request);
+
+    return this.interviewsService.overrideDecision(interviewId, userId, dto);
   }
 }

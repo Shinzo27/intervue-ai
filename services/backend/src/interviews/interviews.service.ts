@@ -12,6 +12,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { CreateDecisionDto } from './dto/create-decision.dto';
+import { OverrideDecisionDto } from './dto/override-decision.dto';
 @Injectable()
 export class InterviewsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -814,5 +816,138 @@ export class InterviewsService {
     }
 
     return conversation;
+  }
+
+  async createDecision(interviewId: string, dto: CreateDecisionDto) {
+    const interview = await this.prisma.interviewSession.findUnique({
+      where: {
+        id: interviewId,
+      },
+      include: {
+        application: true,
+      },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    const existingDecision = await this.prisma.decision.findUnique({
+      where: {
+        applicationId: interview.applicationId,
+      },
+    });
+
+    if (existingDecision) {
+      throw new BadRequestException(
+        'A decision already exists for this application',
+      );
+    }
+
+    const scores = await this.prisma.score.findMany({
+      where: {
+        applicationId: interview.applicationId,
+      },
+    });
+
+    if (scores.length === 0) {
+      throw new BadRequestException('No scores available for this application');
+    }
+
+    const totalScore = scores.reduce(
+      (total, score) => total + score.overallScore,
+      0,
+    );
+
+    const maxScore = scores.reduce((total, score) => total + score.maxScore, 0);
+
+    return this.prisma.decision.create({
+      data: {
+        applicationId: interview.applicationId,
+        outcome: dto.outcome,
+        totalScore,
+        maxScore,
+        reasoning: `Decision created from ${scores.length} evaluated question(s).`,
+      },
+    });
+  }
+
+  async overrideDecision(
+    interviewId: string,
+    userId: string,
+    dto: OverrideDecisionDto,
+  ) {
+    const interview = await this.prisma.interviewSession.findUnique({
+      where: {
+        id: interviewId,
+      },
+      include: {
+        application: true,
+      },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    const decision = await this.prisma.decision.findUnique({
+      where: {
+        applicationId: interview.applicationId,
+      },
+    });
+
+    if (!decision) {
+      throw new NotFoundException('Decision not found for this application');
+    }
+
+    if (decision.outcome === dto.newOutcome) {
+      throw new BadRequestException(
+        'New outcome must be different from the current outcome',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const override = await tx.decisionOverride.create({
+        data: {
+          decisionId: decision.id,
+          overriddenById: userId,
+          previousOutcome: decision.outcome,
+          newOutcome: dto.newOutcome,
+          reason: dto.reason,
+        },
+      });
+
+      const updatedDecision = await tx.decision.update({
+        where: {
+          id: decision.id,
+        },
+        data: {
+          outcome: dto.newOutcome,
+          decidedAt: new Date(),
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          organizationId: interview.application.organizationId,
+          actorType: 'USER',
+          actorId: userId,
+          action: 'DECISION_OVERRIDDEN',
+          entityType: 'Decision',
+          entityId: decision.id,
+          metadata: {
+            previousOutcome: decision.outcome,
+            newOutcome: dto.newOutcome,
+            reason: dto.reason,
+            decisionOverrideId: override.id,
+          },
+        },
+      });
+
+      return {
+        decision: updatedDecision,
+        override,
+      };
+    });
   }
 }
