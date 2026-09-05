@@ -73,3 +73,5 @@ Backend Swagger: http://localhost:3000/api/docs
 - [`docs/ai.md`](docs/ai.md) — AI & MCP architecture (tool catalog, two-model scoring, safety rules)
 - [`docs/master-note.md`](docs/master-note.md) — full project master note
 - [`docs/architecture.md`](docs/architecture.md) · [`docs/database.md`](docs/database.md) · [`docs/api.md`](docs/api.md) — backend references
+- [`infra/postman/`](infra/postman/) — Postman collection (all sprints + internal API) & runnable chain runner:
+  `python infra/postman/run_collection.py` (backend must be running on :3000)

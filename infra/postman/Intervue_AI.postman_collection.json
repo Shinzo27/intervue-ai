@@ -1,0 +1,4262 @@
+{
+  "info": {
+    "_postman_id": "b2e5b2b6-2f8e-4f3a-9f8b-intervue-ai-production",
+    "name": "Intervue AI - API (Production Grade)",
+    "description": "Intervue AI API — full coverage: auth/RBAC, pipelines, jobs, snapshot workflow (Sprints 2–3), candidates/applications/invite tokens (Sprint 4), interview runtime/conversation/mock evaluation/decisions & overrides (Sprint 5), and the Internal capability surface for ai-service MCP tools (Phase 1). Folders 11+ chain collection variables; run in order. Internal folder requires internalServiceSecret from services/backend/.env.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.request.headers.upsert({ key: 'Origin', value: pm.collectionVariables.get('frontendOrigin') });",
+          "if (['POST','PUT','PATCH'].includes(pm.request.method) && pm.request.body && pm.request.body.mode === 'raw') { pm.request.headers.upsert({ key: 'Content-Type', value: 'application/json' }); }"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "frontendOrigin",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "organizationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pipelineId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "stageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "questionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "optionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "rubricId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobPostingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobPostingIdB",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pipelineVersionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invitationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testEmail",
+      "value": "recruiter@example.com",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "recruiter_secure_password",
+      "type": "string"
+    },
+    {
+      "key": "testName",
+      "value": "Jane Recruiter",
+      "type": "string"
+    },
+    {
+      "key": "internalBaseUrl",
+      "value": "http://localhost:3000/api/internal",
+      "type": "string"
+    },
+    {
+      "key": "internalServiceSecret",
+      "value": "PASTE_INTERNAL_SERVICE_SECRET",
+      "type": "string"
+    },
+    {
+      "key": "candidateId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "applicationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "candidateToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "interviewId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "answerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "currentQuestionVersionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nextQuestionVersionId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Basic liveness check. Does not require authentication."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Authentication",
+      "item": [
+        {
+          "name": "Sign Up - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-up/email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "sign-up",
+                "email"
+              ]
+            },
+            "description": "Creates a test user. Better Auth should establish a session/cookie when configured to do so.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"name\": \"{{testName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign In - Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-in/email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "sign-in",
+                "email"
+              ]
+            },
+            "description": "Sign in with Better Auth. Keep Postman's cookie jar enabled so the session cookie is reused.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/get-session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "get-session"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RBAC Test - Pipeline",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rbac-test/pipeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rbac-test",
+                "pipeline"
+              ]
+            },
+            "description": "Use this to verify the currently authenticated user's RBAC permissions."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Organizations",
+      "item": [
+        {
+          "name": "Create Organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/organization/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "organization",
+                "create"
+              ]
+            },
+            "description": "Creates an organization and captures organizationId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Intervue AI Test Org\",\n  \"slug\": \"intervue-ai-test-org\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.organization?.id; if (capturedId) { pm.collectionVariables.set('organizationId', capturedId); console.log('Captured organizationId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Organizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/organization/list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "organization",
+                "list"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Active Organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/organization/set-active",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "organization",
+                "set-active"
+              ]
+            },
+            "description": "Sets the active organization used by the application and RBAC guard.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizationId\": \"{{organizationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/organization/invite-member",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "organization",
+                "invite-member"
+              ]
+            },
+            "description": "Invite another user. Replace the email if the user already exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"role\": \"recruiter\",\n  \"organizationId\": \"{{organizationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/organization/accept-invitation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "organization",
+                "accept-invitation"
+              ]
+            },
+            "description": "Requires a real invitationId. Set it manually in collection variables before running.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invitationId\": \"{{invitationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Pipelines",
+      "item": [
+        {
+          "name": "Create Pipeline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines"
+              ]
+            },
+            "description": "Creates an organization-scoped pipeline and captures pipelineId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Backend Developer - API Test Pipeline\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.pipeline?.id; if (capturedId) { pm.collectionVariables.set('pipelineId', capturedId); console.log('Captured pipelineId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Pipelines",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Pipeline",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Pipeline",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Backend Developer - Updated Pipeline\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Pipeline",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}"
+              ]
+            },
+            "description": "Run only after pipeline-dependent test data is no longer needed."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Pipeline Stages",
+      "item": [
+        {
+          "name": "Create Stage - Technical",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}/stages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}",
+                "stages"
+              ]
+            },
+            "description": "First stage in the reusable pipeline. Captures stageId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Technical Interview\",\n  \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.stage?.id; if (capturedId) { pm.collectionVariables.set('stageId', capturedId); console.log('Captured stageId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Stage - HR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}/stages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}",
+                "stages"
+              ]
+            },
+            "description": "Second stage. Useful for testing ordering.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"HR Interview\",\n  \"order\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Stages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}/stages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}",
+                "stages"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Stage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}/stages/{{stageId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}",
+                "stages",
+                "{{stageId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Stage",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}/stages/{{stageId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}",
+                "stages",
+                "{{stageId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Technical + System Design Interview\",\n  \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Stage",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}/stages/{{stageId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}",
+                "stages",
+                "{{stageId}}"
+              ]
+            },
+            "description": "Run after question tests, because questions belong to the stage."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Questions",
+      "item": [
+        {
+          "name": "Create Question - Open Ended",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions"
+              ]
+            },
+            "description": "Creates an open-ended question and captures questionId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Explain how you would design a scalable REST API.\",\n  \"type\": \"MULTI_LINE\",\n  \"order\": 1,\n  \"required\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.question?.id; if (capturedId) { pm.collectionVariables.set('questionId', capturedId); console.log('Captured questionId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Question - Single Line",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"How many years of backend development experience do you have?\",\n  \"type\": \"SINGLE_LINE\",\n  \"order\": 2,\n  \"required\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Question - MCQ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Which database do you prefer for transactional workloads?\",\n  \"type\": \"MCQ\",\n  \"order\": 3,\n  \"required\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Questions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Question Options",
+      "item": [
+        {
+          "name": "Create Option - PostgreSQL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions/{{questionId}}/options",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions",
+                "{{questionId}}",
+                "options"
+              ]
+            },
+            "description": "Adds an option to the captured MCQ question. Captures optionId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"PostgreSQL\",\n  \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.option?.id; if (capturedId) { pm.collectionVariables.set('optionId', capturedId); console.log('Captured optionId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Option - MySQL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions/{{questionId}}/options",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions",
+                "{{questionId}}",
+                "options"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"MySQL\",\n  \"order\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Option - MongoDB",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions/{{questionId}}/options",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions",
+                "{{questionId}}",
+                "options"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"MongoDB\",\n  \"order\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Rubric Criteria",
+      "item": [
+        {
+          "name": "Create Rubric - System Design",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions/{{questionId}}/rubrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions",
+                "{{questionId}}",
+                "rubrics"
+              ]
+            },
+            "description": "Creates a rubric criterion and captures rubricId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"System Design\",\n  \"description\": \"Evaluates scalable architecture and trade-off reasoning.\",\n  \"maxScore\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.rubric?.id; if (capturedId) { pm.collectionVariables.set('rubricId', capturedId); console.log('Captured rubricId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Rubric - Database Design",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions/{{questionId}}/rubrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions",
+                "{{questionId}}",
+                "rubrics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Database Design\",\n  \"description\": \"Evaluates schema, indexing and database selection.\",\n  \"maxScore\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Rubric - Scalability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stages/{{stageId}}/questions/{{questionId}}/rubrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stages",
+                "{{stageId}}",
+                "questions",
+                "{{questionId}}",
+                "rubrics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Scalability\",\n  \"description\": \"Evaluates ability to design for high traffic.\",\n  \"maxScore\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 - Job Postings",
+      "item": [
+        {
+          "name": "Create Job Posting - Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings"
+              ]
+            },
+            "description": "Creates a DRAFT job using the current pipeline template and captures jobPostingId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Senior Backend Developer\",\n  \"description\": \"Backend role for a scalable SaaS platform.\",\n  \"pipelineId\": \"{{pipelineId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.jobPosting?.id; if (capturedId) { pm.collectionVariables.set('jobPostingId', capturedId); console.log('Captured jobPostingId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Job Postings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Job Posting - Draft",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingId}}"
+              ]
+            },
+            "description": "Draft jobs should resolve against the current pipeline template."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish Job Posting",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingId}}",
+                "publish"
+              ]
+            },
+            "description": "Creates an immutable PipelineVersion snapshot and changes the job status to PUBLISHED."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.pipelineVersionId || body?.pipelineVersionId || body?.data?.pipelineVersion?.id; if (capturedId) { pm.collectionVariables.set('pipelineVersionId', capturedId); console.log('Captured pipelineVersionId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Job Posting - Published Snapshot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingId}}"
+              ]
+            },
+            "description": "After publishing, this should resolve the job against pipelineVersion rather than the mutable pipeline template."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish Same Job Again - Expected 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingId}}",
+                "publish"
+              ]
+            },
+            "description": "Negative lifecycle test. A PUBLISHED job must not be published again."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([409]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Job B - Snapshot Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings"
+              ]
+            },
+            "description": "Create a second job after modifying the pipeline template. Captures jobPostingIdB.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Backend Developer - Snapshot Test B\",\n  \"description\": \"Second job used to verify version isolation.\",\n  \"pipelineId\": \"{{pipelineId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.id || body?.id || body?.data?.jobPosting?.id; if (capturedId) { pm.collectionVariables.set('jobPostingIdB', capturedId); console.log('Captured jobPostingIdB:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish Job B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingIdB}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingIdB}}",
+                "publish"
+              ]
+            },
+            "description": "Job B should receive the newer PipelineVersion."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};",
+                  "const capturedId = body?.data?.pipelineVersionId || body?.pipelineVersionId || body?.data?.pipelineVersion?.id; if (capturedId) { pm.collectionVariables.set('pipelineVersionId', capturedId); console.log('Captured pipelineVersionId:', capturedId); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 - Sprint 3 Snapshot Workflow",
+      "item": [
+        {
+          "name": "A - Get Job A Snapshot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingId}}"
+              ]
+            },
+            "description": "Run after Job A is published. Record the stages/questions returned from pipelineVersion."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B - Get Current Pipeline Template",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}"
+              ]
+            },
+            "description": "Compare this mutable template with Job A's immutable snapshot."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "C - Add New Stage To Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/{{pipelineId}}/stages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "{{pipelineId}}",
+                "stages"
+              ]
+            },
+            "description": "Mutates the pipeline template after Job A has already been published.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Final Manager Interview\",\n  \"order\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D - Verify Job A Is Unchanged",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingId}}"
+              ]
+            },
+            "description": "Critical assertion: Job A must still use its original PipelineVersion and must not contain the newly added stage."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E - Verify Job B Uses New Version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/{{jobPostingIdB}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "{{jobPostingIdB}}"
+              ]
+            },
+            "description": "After publishing Job B, it should point to the newer PipelineVersion."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Negative & Security Tests",
+      "item": [
+        {
+          "name": "Invalid Pipeline ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pipelines/does-not-exist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pipelines",
+                "does-not-exist"
+              ]
+            },
+            "description": "Expected application behavior: 404 Not Found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([404]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid Job ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-postings/does-not-exist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "job-postings",
+                "does-not-exist"
+              ]
+            },
+            "description": "Expected application behavior: 404 Not Found."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([404]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RBAC Permission Test",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendOrigin}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rbac-test/pipeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rbac-test",
+                "pipeline"
+              ]
+            },
+            "description": "Run under a role that should/should not have the endpoint permission. Expected denial should be 403/Insufficient permissions when unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is expected', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+                  "let body = {}; try { body = pm.response.json(); } catch (e) {};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 - Sprint 4: Candidates & Applications",
+      "description": "Candidate identity, applications, invite tokens, candidate interview entry. No candidate account required.",
+      "item": [
+        {
+          "name": "Create Candidate",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "candidates"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada.lovelace@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('candidate id returned', () => { pm.expect(b.data).to.have.property('id'); });",
+                  "pm.collectionVariables.set('candidateId', b.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Candidates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "candidates"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application (candidate + job)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidateId\": \"{{candidateId}}\",\n  \"jobPostingId\": \"{{jobPostingId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('applicationId', b.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite Candidate (creates candidate + application + token)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "invite"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Grace\",\n  \"lastName\": \"Hopper\",\n  \"email\": \"grace.hopper@example.com\",\n  \"jobPostingId\": \"{{jobPostingId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "const d = b.data || b;",
+                  "const token = d.inviteToken || (d.application && d.application.inviteToken) || '';",
+                  "pm.test('invite token returned', () => { pm.expect(token).to.be.a('string').that.is.not.empty; });",
+                  "pm.collectionVariables.set('candidateToken', token);",
+                  "if (d.id) { pm.collectionVariables.set('applicationId', d.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Candidate Entry By Token",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/entry?token={{candidateToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "candidates",
+                "entry?token={{candidateToken}}"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200];",
+                  "pm.test('JSON body', () => { pm.response.to.have.jsonBody(); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Candidate Entry Start (mark STARTED)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/entry/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "candidates",
+                "entry",
+                "start"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{candidateToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expired / Invalid Token - Expected 401",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/entry?token=invalid-token-value",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "candidates",
+                "entry?token=invalid-token-value"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [401, 404];"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12 - Sprint 5: Interview Runtime",
+      "description": "Interview session lifecycle: create, candidate access, start, answer, progression.",
+      "item": [
+        {
+          "name": "Create Interview Session",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"{{applicationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('interview id returned', () => { pm.expect(b.data).to.have.property('id'); });",
+                  "pm.collectionVariables.set('interviewId', b.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate Interview - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"{{applicationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400, 409];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Candidate Access (by token)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/access/{{candidateToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "access",
+                "{{candidateToken}}"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200];",
+                  "const b = pm.response.json();",
+                  "pm.test('current stage present', () => { pm.expect(b.data.currentStage).to.exist; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Interview",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "start"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('interview IN_PROGRESS', () => { pm.expect(b.data.status).to.eql('IN_PROGRESS'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Interview Again - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "start"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current Interview (stage + questions)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "current"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "const qs = b.data.stage.questions || [];",
+                  "pm.test('stage has questions', () => { pm.expect(qs.length).to.be.above(0); });",
+                  "pm.collectionVariables.set('currentQuestionVersionId', qs[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Answer (drives progression)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/answers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "answers"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{currentQuestionVersionId}}\",\n  \"content\": \"SQL databases are relational with ACID guarantees; NoSQL trades those for horizontal scale and flexible schemas.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "const d = b.data;",
+                  "pm.test('progression flags present', () => {",
+                  "  pm.expect(d).to.have.property('stageCompleted');",
+                  "  pm.expect(d).to.have.property('interviewCompleted');",
+                  "});",
+                  "if (d.answer && d.answer.id) { pm.collectionVariables.set('answerId', d.answer.id); }",
+                  "if (d.nextQuestion) { pm.collectionVariables.set('currentQuestionVersionId', d.nextQuestion.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate Answer - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/answers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "answers"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{currentQuestionVersionId}}\",\n  \"content\": \"duplicate submission\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cross-Stage Answer - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/answers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "answers"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"not-in-current-stage\",\n  \"content\": \"too early\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400, 404];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Interview (answer-driven flow normally auto-completes)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "complete"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201, 400];"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13 - Sprint 5: Conversation",
+      "description": "Conversation + messages runtime (foundation for the AI interviewer).",
+      "item": [
+        {
+          "name": "Create Conversation",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/conversation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "conversation"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201, 400];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Append Assistant Message",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/conversation/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "conversation",
+                "messages"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ASSISTANT\",\n  \"content\": \"Explain SQL vs NoSQL databases.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Append Candidate Message",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/conversation/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "conversation",
+                "messages"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"CANDIDATE\",\n  \"content\": \"SQL is relational with ACID; NoSQL scales horizontally.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid Role - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/conversation/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "conversation",
+                "messages"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"SYSTEM\",\n  \"content\": \"not allowed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Conversation (ordered transcript)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/conversation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "conversation"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('messages ordered ascending', () => {",
+                  "  const t = (b.data.messages || []).map(function (m) { return m.createdAt; });",
+                  "  const s = t.slice().sort();",
+                  "  pm.expect(t).to.eql(s);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "14 - Sprint 5: Evaluation & Scoring (mock evaluator)",
+      "description": "Current mock evaluator (length-based). Phase 4 replaces the engine with the two-model LLM pipeline over the same data model.",
+      "item": [
+        {
+          "name": "Evaluate Answer (mock scoring)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/answers/{{answerId}}/evaluate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "answers",
+                "{{answerId}}",
+                "evaluate"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('evaluation completed with score', () => {",
+                  "  const e = b.data.evaluation || b.data;",
+                  "  pm.expect(e.status).to.eql('COMPLETED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Re-Evaluate Same Answer - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/answers/{{answerId}}/evaluate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "answers",
+                "{{answerId}}",
+                "evaluate"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Decision (aggregated scores)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "decision"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"PASS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "15 - Sprint 5: Decisions & Overrides",
+      "description": "One decision per application; human overrides preserve full history.",
+      "item": [
+        {
+          "name": "Human Override (previous outcome preserved)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/decision/override",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "decision",
+                "override"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newOutcome\": \"FAIL\",\n  \"reason\": \"Strong production experience not captured by rubric.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201, 403];",
+                  "const b = pm.response.json();",
+                  "if (pm.response.code < 400) {",
+                  "  pm.test('override stores previous outcome', () => {",
+                  "    const o = b.data.override || b.data;",
+                  "    pm.expect(o).to.have.property('previousOutcome');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Override Same Outcome - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/{{interviewId}}/decision/override",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "interviews",
+                "{{interviewId}}",
+                "decision",
+                "override"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newOutcome\": \"FAIL\",\n  \"reason\": \"no-op\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400];"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "16 - Internal API (ai-service capability surface)",
+      "description": "Service-to-service API consumed by MCP tools (Phase 1). Auth: Authorization: Internal <INTERNAL_SERVICE_SECRET>. Raw payloads (no success/data envelope). Set internalServiceSecret in collection variables.",
+      "item": [
+        {
+          "name": "Get Interview State (agent-facing)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{internalBaseUrl}}/interviews/{{interviewId}}/state",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "interviews",
+                "{{interviewId}}",
+                "state"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('state shape', () => {",
+                  "  pm.expect(b).to.have.property('interview');",
+                  "  pm.expect(b).to.have.property('progress');",
+                  "});",
+                  "if (b.question) { pm.collectionVariables.set('currentQuestionVersionId', b.question.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Transcript",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{internalBaseUrl}}/interviews/{{interviewId}}/transcript",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "interviews",
+                "{{interviewId}}",
+                "transcript"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "pm.test('JSON body', () => { pm.response.to.have.jsonBody(); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Append Message (with metadata)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/interviews/{{interviewId}}/messages",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "interviews",
+                "{{interviewId}}",
+                "messages"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ASSISTANT\",\n  \"content\": \"Tell us about a challenging project.\",\n  \"metadata\": {\n    \"source\": \"ai-service\",\n    \"model\": \"gpt-4o-mini\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "pm.test('JSON body', () => { pm.response.to.have.jsonBody(); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Answer (internal flow, TRANSCRIPT type)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/interviews/{{interviewId}}/answers",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "interviews",
+                "{{interviewId}}",
+                "answers"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{currentQuestionVersionId}}\",\n  \"content\": \"I built a distributed order-processing backend with idempotent workers and an outbox pattern.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "if (b.answer && b.answer.id) { pm.collectionVariables.set('answerId', b.answer.id); }",
+                  "if (b.nextQuestion) { pm.collectionVariables.set('currentQuestionVersionId', b.nextQuestion.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing Token - Expected 401",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{internalBaseUrl}}/interviews/{{interviewId}}/state",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "interviews",
+                "{{interviewId}}",
+                "state"
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [401];",
+                  "pm.test('guard message', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('Internal service authorization required');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong Token - Expected 401",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{internalBaseUrl}}/interviews/{{interviewId}}/state",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "interviews",
+                "{{interviewId}}",
+                "state"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal wrong-secret"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [401];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Evaluation (PENDING)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/evaluations",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"interviewSessionId\": \"{{interviewId}}\",\n  \"answerId\": \"{{answerId}}\",\n  \"model\": \"openai/gpt-4o-mini\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('evaluation is PENDING', () => { pm.expect(b.status).to.eql('PENDING'); });",
+                  "pm.collectionVariables.set('evaluationId', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Evaluation",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{internalBaseUrl}}/evaluations/{{evaluationId}}/complete",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evaluationId}}",
+                "complete"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 7,\n  \"reasoning\": \"solid fundamentals across criteria\",\n  \"result\": {\n    \"criteria\": []\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('evaluation COMPLETED', () => { pm.expect(b.status).to.eql('COMPLETED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Double Complete - Expected 400",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{internalBaseUrl}}/evaluations/{{evaluationId}}/complete",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evaluationId}}",
+                "complete"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fail Evaluation (second model path)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/evaluations",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"interviewSessionId\": \"{{interviewId}}\",\n  \"answerId\": \"{{answerId}}\",\n  \"model\": \"groq/llama-3.3-70b\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('evaluationId', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fail Evaluation - FAILED (no score written)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{internalBaseUrl}}/evaluations/{{evaluationId}}/fail",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evaluationId}}",
+                "fail"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"error\": \"llm timeout\",\n  \"result\": {\n    \"attempt\": 1\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('evaluation FAILED', () => { pm.expect(b.status).to.eql('FAILED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upsert Score (Score + CriterionScores, idempotent)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/scores",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "scores"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"{{applicationId}}\",\n  \"questionVersionId\": \"{{currentQuestionVersionId}}\",\n  \"overallScore\": 7,\n  \"maxScore\": 8,\n  \"reasoning\": \"two-model aggregated\",\n  \"criteria\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "pm.test('JSON body', () => { pm.response.to.have.jsonBody(); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Overall Above Max - Expected 400",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/scores",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "scores"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"{{applicationId}}\",\n  \"questionVersionId\": \"{{currentQuestionVersionId}}\",\n  \"overallScore\": 99,\n  \"maxScore\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [400];"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Application Score Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{internalBaseUrl}}/applications/{{applicationId}}/score-summary",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "{{applicationId}}",
+                "score-summary"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('summary shape', () => {",
+                  "  pm.expect(b).to.have.property('totalScore');",
+                  "  pm.expect(b).to.have.property('maxScore');",
+                  "  pm.expect(b).to.have.property('percentage');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Interview (idempotent)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/interviews/{{interviewId}}/complete",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "interviews",
+                "{{interviewId}}",
+                "complete"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "pm.test('JSON body', () => { pm.response.to.have.jsonBody(); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Decision (AI recommendation + audit)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/applications/{{applicationId}}/decision",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "{{applicationId}}",
+                "decision"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"PASS\",\n  \"totalScore\": 15,\n  \"maxScore\": 16,\n  \"reasoning\": \"meets the hiring bar\",\n  \"requestedBy\": \"ai-service/two-model-aggregator\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201, 400];",
+                  "pm.test('JSON body', () => { pm.response.to.have.jsonBody(); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Audit Event (AI actor)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{internalBaseUrl}}/audit-events",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "audit-events"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizationId\": \"{{organizationId}}\",\n  \"actorType\": \"AI\",\n  \"actorId\": \"ai-service/scoring-mcp\",\n  \"action\": \"ANSWER_EVALUATED\",\n  \"entityType\": \"AIEvaluation\",\n  \"entityId\": \"{{evaluationId}}\",\n  \"metadata\": {\n    \"model\": \"openai/gpt-4o-mini\",\n    \"tool\": \"evaluate_answer\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "pm.test('JSON body', () => { pm.response.to.have.jsonBody(); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Audit Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{internalBaseUrl}}/audit/{{organizationId}}?limit=50",
+              "host": [
+                "{{internalBaseUrl}}"
+              ],
+              "path": [
+                "audit",
+                "{{organizationId}}?limit=50"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Internal {{internalServiceSecret}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const statuses = [200, 201];",
+                  "const b = pm.response.json();",
+                  "pm.test('audit is an array', () => { pm.expect(Array.isArray(b)).to.be.true; });",
+                  "pm.test('AI actor events present', () => {",
+                  "  pm.expect(b.some(function (e) { return e.actorType === 'AI'; })).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
