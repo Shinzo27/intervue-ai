@@ -5,5 +5,9 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^src/auth/utils/session$": "<rootDir>/mocks/auth-context.mock.ts",
+    "^@thallesp/nestjs-better-auth$": "<rootDir>/../src/__mocks__/@thallesp/nestjs-better-auth.ts"
   }
 }

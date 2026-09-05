@@ -46,9 +46,10 @@ Rules:
 
 1. **The backend is the only writer of business state.** MCP tools are orchestrators, not database writers.
 2. Every internal endpoint is guarded by `InternalServiceGuard` — `Authorization: Internal <INTERNAL_SERVICE_SECRET>`.
-3. Every internal endpoint validates input with class-validator DTOs and performs **organization-scoped** queries.
-4. Each MCP tool maps to one internal endpoint (thin adapter) or orchestrates a small sequence of them (e.g. `evaluate_answer`).
-5. All state-changing AI actions produce audit events with `actorType: AI` and metadata identifying tool, model, request context, and result.
+3. Route handlers are additionally marked `@Public()` — **not** to make them public, but to opt them out of the Better Auth *session* `APP_GUARD` (which the auth package registers globally). The service token guard remains the authority; these routes have zero browser/session surface.
+4. Every internal endpoint validates input with class-validator DTOs and performs **organization-scoped** queries.
+5. Each MCP tool maps to one internal endpoint (thin adapter) or orchestrates a small sequence of them (e.g. `evaluate_answer`).
+6. All state-changing AI actions produce audit events with `actorType: AI` and metadata identifying tool, model, request context, and result.
 
 ---
 
@@ -74,6 +75,25 @@ Phase tags refer to the completion plan. ✅ = implemented.
 | `get_stage_questions` | All questions for a stage version, in order | 3 |
 | `get_question_details` | Question + options + rubric criteria | 3 |
 | `get_interview_progress` | Stage/question counters, completion state | 3 |
+
+### Backend internal capability surface (Phase 1 — implemented)
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/internal/interviews/:id/state` | Full agent-facing state (stage, question + options + rubric, progress, candidate/job summary) |
+| `GET /api/internal/interviews/:id/transcript` | Conversation messages for agent context |
+| `POST /api/internal/interviews/:id/messages` | Append Message (role + optional metadata) |
+| `POST /api/internal/interviews/:id/answers` | Answer submission (delegates to runtime flow; stores as TRANSCRIPT) |
+| `POST /api/internal/evaluations` | Create PENDING evaluation (one per model — two-model scoring) |
+| `PATCH /api/internal/evaluations/:id/complete` | Complete with score/reasoning/result |
+| `PATCH /api/internal/evaluations/:id/fail` | Fail with error metadata (no invalid score) |
+| `POST /api/internal/scores` | Transactional upsert of Score + CriterionScores (unique per app+questionVersion) |
+| `GET /api/internal/applications/:id/score-summary` | Aggregated totals + per-question rows |
+| `POST /api/internal/interviews/:id/complete` | Guarded, idempotent completion sweep |
+| `POST /api/internal/applications/:id/decision` | Persist AI recommendation (+ `DECISION_CREATED` audit, actorType AI) |
+| `POST /api/internal/audit-events` | Append audit event (USER/AI/SYSTEM) |
+| `GET /api/internal/audit/:organizationId` | List audit events (recency) |
+| `POST /api/internal/candidate/validate` | Legacy v0 candidate-token validation |
 
 ### Scoring MCP
 
