@@ -70,11 +70,19 @@ Phase tags refer to the completion plan. ✅ = implemented.
 
 | Tool | Purpose | Phase |
 |---|---|---|
-| `get_current_interview_state` | Session, current stage version, current question version (+options +rubric), progress, application/candidate/job summary | 2 |
+| `get_current_interview_state` ✅ | Session, current stage version, current question version (+options +rubric), progress, application/candidate/job summary | 2 |
 | `get_current_question` | Verbatim question text + options for the current question version | 3 |
 | `get_stage_questions` | All questions for a stage version, in order | 3 |
 | `get_question_details` | Question + options + rubric criteria | 3 |
 | `get_interview_progress` | Stage/question counters, completion state | 3 |
+
+### MCP server foundation (Phase 2 — implemented)
+
+- `services/ai-service` is now a real service (ESM, express, zod-validated env, fail-fast boot).
+- **Tool registry pattern** (`src/mcp/registry.ts`): tools declared once (`{name, description, inputSchema(Zod), permissions, readOnly, handler}`), wired to any transport; handlers get SDK-validated args + trace context; errors map to structured `{ok:false, error:{kind,status,hint,traceId}}` — never silent.
+- **Backend client** (`src/backend/client.ts`): typed methods per internal endpoint, `x-trace-id` propagation, exponential-backoff retry on idempotent requests, `BackendError(status, traceId)`.
+- **Dual transports**: Streamable HTTP (stateless, per-request transport, Bearer-token auth, open `/health` probe) and **stdio** (local agents/Claude Desktop). Verified live on both: initialize / tools/list / tools/call, 401 auth, structured 404, SDK-level `-32602` invalid-UUID rejection.
+- First tool live: `get_current_interview_state` — frozen stage/question/options/rubric + progress via the backend internal API.
 
 ### Backend internal capability surface (Phase 1 — implemented)
 
