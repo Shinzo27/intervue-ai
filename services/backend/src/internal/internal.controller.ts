@@ -54,6 +54,36 @@ export class InternalController {
     return this.internalService.getInterviewState(id);
   }
 
+  @Get('interviews/:id/current-question')
+  @ApiResponseFormat()
+  async getCurrentQuestion(@Param('id') id: string) {
+    return this.internalService.getCurrentQuestion(id);
+  }
+
+  @Get('interviews/:id/stages/:stageVersionId/questions')
+  @ApiResponseFormat()
+  async getStageQuestions(
+    @Param('id') id: string,
+    @Param('stageVersionId') stageVersionId: string,
+  ) {
+    return this.internalService.getStageQuestions(id, stageVersionId);
+  }
+
+  @Get('interviews/:id/questions/:questionVersionId')
+  @ApiResponseFormat()
+  async getQuestionDetails(
+    @Param('id') id: string,
+    @Param('questionVersionId') questionVersionId: string,
+  ) {
+    return this.internalService.getQuestionDetails(id, questionVersionId);
+  }
+
+  @Get('interviews/:id/progress')
+  @ApiResponseFormat()
+  async getInterviewProgress(@Param('id') id: string) {
+    return this.internalService.getInterviewProgress(id);
+  }
+
   @Get('interviews/:id/transcript')
   @ApiResponseFormat()
   async getTranscript(@Param('id') id: string) {

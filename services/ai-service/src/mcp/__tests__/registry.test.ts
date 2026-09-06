@@ -9,8 +9,24 @@ import { z } from 'zod';
 function fakeClient(overrides: Partial<Record<string, never>> = {}) {
   return {
     getInterviewState: mock.fn(async () => ({ interview: { id: 'i1' } })),
+    getCurrentQuestion: mock.fn(async () => ({ question: { id: 'q1' } })),
+    getStageQuestions: mock.fn(async () => ({ questions: [] })),
+    getQuestionDetails: mock.fn(async () => ({ rubricCriteria: [] })),
+    getInterviewProgress: mock.fn(async () => ({ progress: {} })),
     ...overrides,
   } as never as Parameters<typeof buildPipelineTools>[0];
+}
+
+const UUID_A = '00000000-0000-4000-8000-00000000000a';
+const UUID_B = '00000000-0000-4000-8000-00000000000b';
+
+function mockCalls(
+  client: ReturnType<typeof fakeClient>,
+  method: string,
+): unknown[][] {
+  return (client as never as Record<string, { mock: { calls: { arguments: unknown[] }[] } }>)[
+    method
+  ].mock.calls.map((c) => c.arguments);
 }
 
 describe('ToolRegistry', () => {
@@ -93,7 +109,7 @@ describe('pipeline tools', () => {
   it('get_current_interview_state calls the backend with a trace id', async () => {
     const client = fakeClient();
     const [tool] = buildPipelineTools(client);
-    await tool.handler({ interviewId: '00000000-0000-4000-8000-000000000001' } as never, {
+    await tool.handler({ interviewId: UUID_A } as never, {
       traceId: 'trace-42',
     });
     const calls = (client as never as {
@@ -101,9 +117,63 @@ describe('pipeline tools', () => {
     }).getInterviewState.mock.calls;
     assert.equal(calls.length, 1);
     assert.deepEqual(calls[0].arguments, [
-      '00000000-0000-4000-8000-000000000001',
+      UUID_A,
       'trace-42',
     ]);
+  });
+
+  it('exposes all five read tools with correct routing and trace ids', async () => {
+    const client = fakeClient();
+    const tools = buildPipelineTools(client);
+    assert.deepEqual(
+      tools.map((t) => t.name),
+      [
+        'get_current_interview_state',
+        'get_current_question',
+        'get_stage_questions',
+        'get_question_details',
+        'get_interview_progress',
+      ],
+    );
+    assert.ok(tools.every((t) => t.readOnly === true));
+    assert.ok(tools.every((t) => t.permissions.includes('pipeline:read')));
+
+    const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+    await byName.get_current_question.handler({ interviewId: UUID_A } as never, { traceId: 't1' });
+    await byName.get_stage_questions.handler(
+      { interviewId: UUID_A, stageVersionId: UUID_B } as never,
+      { traceId: 't2' },
+    );
+    await byName.get_question_details.handler(
+      { interviewId: UUID_A, questionVersionId: UUID_B } as never,
+      { traceId: 't3' },
+    );
+    await byName.get_interview_progress.handler({ interviewId: UUID_A } as never, { traceId: 't4' });
+
+    assert.deepEqual(mockCalls(client, 'getCurrentQuestion'), [[UUID_A, 't1']]);
+    assert.deepEqual(mockCalls(client, 'getStageQuestions'), [[UUID_A, UUID_B, 't2']]);
+    assert.deepEqual(mockCalls(client, 'getQuestionDetails'), [[UUID_A, UUID_B, 't3']]);
+    assert.deepEqual(mockCalls(client, 'getInterviewProgress'), [[UUID_A, 't4']]);
+  });
+
+  it('rejects malformed inputs at the schema level', () => {
+    const tools = buildPipelineTools(fakeClient());
+    const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+
+    assert.equal(
+      z.object(byName.get_current_question.inputSchema).safeParse({ interviewId: 'nope' }).success,
+      false,
+    );
+    assert.equal(
+      z.object(byName.get_stage_questions.inputSchema).safeParse({ interviewId: UUID_A }).success,
+      false, // missing stageVersionId
+    );
+    assert.equal(
+      z
+        .object(byName.get_question_details.inputSchema)
+        .safeParse({ interviewId: UUID_A, questionVersionId: 'bad' }).success,
+      false,
+    );
   });
 
   it('declares read-only permission and a uuid-validated input', () => {

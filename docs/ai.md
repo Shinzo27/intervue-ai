@@ -71,10 +71,10 @@ Phase tags refer to the completion plan. ✅ = implemented.
 | Tool | Purpose | Phase |
 |---|---|---|
 | `get_current_interview_state` ✅ | Session, current stage version, current question version (+options +rubric), progress, application/candidate/job summary | 2 |
-| `get_current_question` | Verbatim question text + options for the current question version | 3 |
-| `get_stage_questions` | All questions for a stage version, in order | 3 |
-| `get_question_details` | Question + options + rubric criteria | 3 |
-| `get_interview_progress` | Stage/question counters, completion state | 3 |
+| `get_current_question` ✅ | Verbatim question text + options for the current question version | 3 |
+| `get_stage_questions` ✅ | All questions for a stage version, in order (ownership-checked against the interview) | 3 |
+| `get_question_details` ✅ | Question + options + rubric criteria (ownership-checked) | 3 |
+| `get_interview_progress` ✅ | Stage-by-stage runtime map + answered/total counters | 3 |
 
 ### MCP server foundation (Phase 2 — implemented)
 
@@ -82,7 +82,7 @@ Phase tags refer to the completion plan. ✅ = implemented.
 - **Tool registry pattern** (`src/mcp/registry.ts`): tools declared once (`{name, description, inputSchema(Zod), permissions, readOnly, handler}`), wired to any transport; handlers get SDK-validated args + trace context; errors map to structured `{ok:false, error:{kind,status,hint,traceId}}` — never silent.
 - **Backend client** (`src/backend/client.ts`): typed methods per internal endpoint, `x-trace-id` propagation, exponential-backoff retry on idempotent requests, `BackendError(status, traceId)`.
 - **Dual transports**: Streamable HTTP (stateless, per-request transport, Bearer-token auth, open `/health` probe) and **stdio** (local agents/Claude Desktop). Verified live on both: initialize / tools/list / tools/call, 401 auth, structured 404, SDK-level `-32602` invalid-UUID rejection.
-- First tool live: `get_current_interview_state` — frozen stage/question/options/rubric + progress via the backend internal API.
+- First tools live: **all 5 Pipeline MCP read tools**. Stage/question reads enforce interview ownership server-side — foreign snapshot ids 404. (Schema note: stage/question version ids are cuids, validated `min(5)`; interview ids are UUIDs.)
 
 ### Backend internal capability surface (Phase 1 — implemented)
 

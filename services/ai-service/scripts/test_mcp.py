@@ -78,9 +78,11 @@ if not match:
     print(run.stdout[-1500:])
     print("Could not seed an interview — is the backend running on :3000?")
     sys.exit(1)
-interview_id = match.group(1)
+interview_id = match.group(1)  # completed interview (state checks)
+match2 = re.search(r"secondInterviewId = ([0-9a-f-]{36})", run.stdout)
+interview_id2 = match2.group(1) if match2 else interview_id  # in-progress
 runner_ok = "failed: 0" in run.stdout
-check("chain runner 41/41", runner_ok, f"interview={interview_id[:8]}…")
+check("chain runner", runner_ok, f"completed={interview_id[:8]}… inprogress={interview_id2[:8]}…")
 
 # ------------------------------------------------------------- 2. HTTP transport
 
@@ -110,7 +112,17 @@ check("initialize", status == 200 and body["result"]["serverInfo"]["name"] == "i
 
 status, body = post(rpc("tools/list", 2))
 tools = [t["name"] for t in body["result"]["tools"]]
-check("tools/list", status == 200 and "get_current_interview_state" in tools, ", ".join(tools))
+check(
+    "tools/list (5 pipeline tools)",
+    status == 200 and set(tools) == {
+        "get_current_interview_state",
+        "get_current_question",
+        "get_stage_questions",
+        "get_question_details",
+        "get_interview_progress",
+    },
+    ", ".join(sorted(tools)),
+)
 
 status, body = post(rpc("tools/call", 3, {
     "name": "get_current_interview_state",
@@ -142,6 +154,69 @@ check(
     "invalid uuid rejected (schema)",
     body["result"].get("isError") is True and "-32602" in body["result"]["content"][0]["text"],
 )
+
+# ------------------------------------------------- 2b. Pipeline MCP toolset
+
+print("\n== Pipeline MCP tools (in-progress interview) ==")
+
+status, body = post(rpc("tools/call", 6, {
+    "name": "get_current_question",
+    "arguments": {"interviewId": interview_id2},
+}))
+cq = tool_payload(body)
+check(
+    "get_current_question",
+    status == 200 and cq["ok"] and cq["result"]["question"]["id"],
+    f"stage={cq['result']['stageName']} q=\"{cq['result']['question']['question'][:40]}…\"",
+)
+current_question_id = cq["result"]["question"]["id"]
+
+status, body = post(rpc("tools/call", 7, {
+    "name": "get_interview_progress",
+    "arguments": {"interviewId": interview_id2},
+}))
+prog = tool_payload(body)["result"]
+current_stages = [s for s in prog["stages"] if s["isCurrent"]]
+check(
+    "get_interview_progress",
+    status == 200 and prog["progress"]["totalStages"] == 2 and len(current_stages) == 1,
+    f"stages={[s['status'] for s in prog['stages']]}",
+)
+stage_version_id = current_stages[0]["pipelineStageVersionId"]
+
+status, body = post(rpc("tools/call", 8, {
+    "name": "get_stage_questions",
+    "arguments": {"interviewId": interview_id2, "stageVersionId": stage_version_id},
+}))
+sq = tool_payload(body)["result"]
+check(
+    "get_stage_questions",
+    status == 200 and len(sq["questions"]) == 2,
+    f"q orders={[q['order'] for q in sq['questions']]}",
+)
+
+status, body = post(rpc("tools/call", 9, {
+    "name": "get_question_details",
+    "arguments": {"interviewId": interview_id2, "questionVersionId": current_question_id},
+}))
+qd = tool_payload(body)["result"]
+check(
+    "get_question_details",
+    status == 200
+    and qd["question"]["id"] == current_question_id
+    and len(qd["rubricCriteria"]) >= 1,
+    f"criteria={[(c['name'], c['maxScore']) for c in qd['rubricCriteria']]}",
+)
+
+status, body = post(rpc("tools/call", 10, {
+    "name": "get_stage_questions",
+    "arguments": {
+        "interviewId": interview_id2,
+        "stageVersionId": "00000000-0000-4000-8000-999999999999",
+    },
+}))
+err = tool_payload(body)["error"]
+check("unknown stage -> structured 404", err["kind"] == "backend_error" and err["status"] == 404)
 
 # ------------------------------------------------------------ 3. stdio transport
 

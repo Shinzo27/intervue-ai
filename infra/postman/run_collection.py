@@ -249,6 +249,21 @@ icall("Internal: Create Audit Event", "POST", "/audit-events",
 audit = icall("Internal: List Audit", "GET", f"/audit/{org_id}")
 print(f"     audit events: {len(audit) if isinstance(audit, list) else 'n/a'}")
 
+# --------------------------------- second interview left IN_PROGRESS (MCP target)
+
+inv2 = call("Invite Candidate B", "POST", "/api/applications/invite",
+            body={"firstName": "Grace", "lastName": "Hopper",
+                  "email": f"grace-{RUN_TAG}@intervue.test", "jobPostingId": job_id})
+inv2_data = data_of(inv2)
+application_id2 = require_id(
+    inv2_data.get("id") or (inv2_data.get("application") or {}).get("id", ""),
+    "applicationIdB")
+iv2 = data_of(call("Create Interview B", "POST", "/api/interviews",
+                   body={"applicationId": application_id2}))
+interview_id2 = require_id(iv2.get("id"), "interviewIdB")
+call("Start Interview B", "POST", f"/api/interviews/{interview_id2}/start")
+print(f"     secondInterviewId = {interview_id2} (in-progress, 0 answers)")
+
 # ------------------------------------------------------------------- report
 
 passed = sum(1 for r in results if r[4])

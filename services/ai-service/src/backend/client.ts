@@ -2,10 +2,14 @@ import { randomUUID } from 'node:crypto';
 import type {
   AIEvaluation,
   AuditEvent,
+  CurrentQuestion,
+  InterviewProgress,
   InterviewState,
   Message,
+  QuestionDetails,
   Score,
   ScoreSummary,
+  StageQuestions,
   Transcript,
 } from './types.js';
 
@@ -149,6 +153,46 @@ export class BackendClient {
     return this.request<InterviewState>(
       'GET',
       `/interviews/${encodeURIComponent(interviewId)}/state`,
+      { traceId },
+    );
+  }
+
+  getCurrentQuestion(interviewId: string, traceId?: string) {
+    return this.request<CurrentQuestion>(
+      'GET',
+      `/interviews/${encodeURIComponent(interviewId)}/current-question`,
+      { traceId },
+    );
+  }
+
+  getStageQuestions(
+    interviewId: string,
+    stageVersionId: string,
+    traceId?: string,
+  ) {
+    return this.request<StageQuestions>(
+      'GET',
+      `/interviews/${encodeURIComponent(interviewId)}/stages/${encodeURIComponent(stageVersionId)}/questions`,
+      { traceId },
+    );
+  }
+
+  getQuestionDetails(
+    interviewId: string,
+    questionVersionId: string,
+    traceId?: string,
+  ) {
+    return this.request<QuestionDetails>(
+      'GET',
+      `/interviews/${encodeURIComponent(interviewId)}/questions/${encodeURIComponent(questionVersionId)}`,
+      { traceId },
+    );
+  }
+
+  getInterviewProgress(interviewId: string, traceId?: string) {
+    return this.request<InterviewProgress>(
+      'GET',
+      `/interviews/${encodeURIComponent(interviewId)}/progress`,
       { traceId },
     );
   }

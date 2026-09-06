@@ -167,6 +167,263 @@ export class InternalService {
   }
 
   /**
+   * The exact question the candidate must answer next (verbatim question
+   * text + options). `get_current_question` (Pipeline MCP) resolves here.
+   */
+  async getCurrentQuestion(interviewId: string) {
+    if (!UUID_RE.test(interviewId)) {
+      throw new BadRequestException('interviewId must be a UUID');
+    }
+
+    const interview = await this.prisma.interviewSession.findUnique({
+      where: { id: interviewId },
+      include: {
+        currentStage: {
+          include: {
+            pipelineStageVersion: {
+              include: {
+                questions: {
+                  orderBy: { order: 'asc' },
+                  include: { options: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    const answeredQuestionIds = new Set(
+      (
+        await this.prisma.answer.findMany({
+          where: { interviewSessionId: interview.id },
+          select: { questionVersionId: true },
+        })
+      ).map((a) => a.questionVersionId),
+    );
+
+    const stageQuestions =
+      interview.currentStage?.pipelineStageVersion.questions ?? [];
+    const currentQuestion = stageQuestions.find(
+      (q) => !answeredQuestionIds.has(q.id),
+    );
+
+    if (!currentQuestion) {
+      throw new NotFoundException(
+        interview.status === InterviewSessionStatus.COMPLETED
+          ? 'Interview is completed; there is no current question'
+          : 'No unanswered question in the current stage',
+      );
+    }
+
+    return {
+      interviewId: interview.id,
+      interviewStatus: interview.status,
+      stageId: interview.currentStage!.id,
+      stageName: interview.currentStage!.pipelineStageVersion.name,
+      question: {
+        id: currentQuestion.id,
+        order: currentQuestion.order,
+        type: currentQuestion.type,
+        required: currentQuestion.required,
+        question: currentQuestion.question,
+        options: currentQuestion.options
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((o) => ({ id: o.id, text: o.text, order: o.order })),
+      },
+    };
+  }
+
+  /**
+   * All questions of a stage version, in order. The interviewId is the
+   * ownership anchor: the stageVersionId must belong to one of the
+   * interview's runtime stages — cross-interview reads are rejected.
+   */
+  async getStageQuestions(interviewId: string, stageVersionId: string) {
+    if (!UUID_RE.test(interviewId)) {
+      throw new BadRequestException('interviewId must be a UUID');
+    }
+
+    const stageVersion = await this.prisma.pipelineStageVersion.findUnique({
+      where: { id: stageVersionId },
+      include: {
+        questions: {
+          orderBy: { order: 'asc' },
+          include: { options: true },
+        },
+      },
+    });
+
+    if (!stageVersion) {
+      throw new NotFoundException('Stage version not found');
+    }
+
+    // Ownership: the stage version must belong to this interview.
+    const owned = await this.prisma.interviewStage.findFirst({
+      where: {
+        interviewSessionId: interviewId,
+        pipelineStageVersionId: stageVersionId,
+      },
+      select: { id: true, order: true, status: true },
+    });
+    if (!owned) {
+      throw new NotFoundException(
+        'Stage version does not belong to this interview',
+      );
+    }
+
+    return {
+      interviewId,
+      stage: {
+        id: stageVersion.id,
+        name: stageVersion.name,
+        order: stageVersion.order,
+      },
+      runtimeStage: owned,
+      questions: stageVersion.questions.map((q) => ({
+        id: q.id,
+        order: q.order,
+        type: q.type,
+        required: q.required,
+        question: q.question,
+        options: q.options
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((o) => ({ id: o.id, text: o.text, order: o.order })),
+      })),
+    };
+  }
+
+  /**
+   * Question version details including rubric criteria — the scoring
+   * context. Ownership enforced against the interview's snapshot.
+   */
+  async getQuestionDetails(interviewId: string, questionVersionId: string) {
+    if (!UUID_RE.test(interviewId)) {
+      throw new BadRequestException('interviewId must be a UUID');
+    }
+
+    const questionVersion = await this.prisma.questionVersion.findUnique({
+      where: { id: questionVersionId },
+      include: {
+        options: true,
+        rubricCriteria: true,
+        pipelineStageVersion: true,
+      },
+    });
+
+    if (!questionVersion) {
+      throw new NotFoundException('Question version not found');
+    }
+
+    // Ownership: the question's stage version must belong to this interview.
+    const owned = await this.prisma.interviewStage.findFirst({
+      where: {
+        interviewSessionId: interviewId,
+        pipelineStageVersionId: questionVersion.pipelineStageVersionId,
+      },
+      select: { id: true },
+    });
+    if (!owned) {
+      throw new NotFoundException(
+        'Question does not belong to this interview',
+      );
+    }
+
+    return {
+      interviewId,
+      question: {
+        id: questionVersion.id,
+        order: questionVersion.order,
+        type: questionVersion.type,
+        required: questionVersion.required,
+        question: questionVersion.question,
+        options: questionVersion.options
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((o) => ({ id: o.id, text: o.text, order: o.order })),
+      },
+      rubricCriteria: questionVersion.rubricCriteria.map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        maxScore: c.maxScore,
+      })),
+      stageVersion: {
+        id: questionVersion.pipelineStageVersion.id,
+        name: questionVersion.pipelineStageVersion.name,
+        order: questionVersion.pipelineStageVersion.order,
+      },
+    };
+  }
+
+  /**
+   * Progress counters plus the runtime stage map — the scheduler view the
+   * conversational agent uses to know where the candidate stands.
+   */
+  async getInterviewProgress(interviewId: string) {
+    if (!UUID_RE.test(interviewId)) {
+      throw new BadRequestException('interviewId must be a UUID');
+    }
+
+    const interview = await this.prisma.interviewSession.findUnique({
+      where: { id: interviewId },
+      include: {
+        currentStage: true,
+      },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    const stages = await this.prisma.interviewStage.findMany({
+      where: { interviewSessionId: interview.id },
+      orderBy: { order: 'asc' },
+    });
+
+    const answeredQuestionIds = new Set(
+      (
+        await this.prisma.answer.findMany({
+          where: { interviewSessionId: interview.id },
+          select: { questionVersionId: true },
+        })
+      ).map((a) => a.questionVersionId),
+    );
+
+    const stageVersionIds = stages.map((s) => s.pipelineStageVersionId);
+    const totalQuestionCount = stageVersionIds.length
+      ? await this.prisma.questionVersion.count({
+          where: { pipelineStageVersionId: { in: stageVersionIds } },
+        })
+      : 0;
+
+    return {
+      interviewId: interview.id,
+      interviewStatus: interview.status,
+      progress: {
+        totalStages: stages.length,
+        completedStages: stages.filter((s) => s.status === 'COMPLETED').length,
+        totalQuestions: totalQuestionCount,
+        answeredQuestions: answeredQuestionIds.size,
+      },
+      stages: stages.map((s) => ({
+        id: s.id,
+        order: s.order,
+        status: s.status,
+        pipelineStageVersionId: s.pipelineStageVersionId,
+        isCurrent: interview.currentStageId === s.id,
+      })),
+      currentStageId: interview.currentStageId,
+    };
+  }
+
+  /**
    * Conversation transcript (agent context). One Conversation row per
    * interview session; messages ordered by createdAt.
    */

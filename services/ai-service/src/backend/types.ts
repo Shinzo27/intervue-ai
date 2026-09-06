@@ -97,6 +97,56 @@ export interface ScoreSummary {
   questions: Score[];
 }
 
+export interface CurrentQuestion {
+  interviewId: string;
+  interviewStatus: string;
+  stageId: string;
+  stageName: string;
+  question: {
+    id: string;
+    order: number;
+    type: string;
+    required: boolean;
+    question: string;
+    options: { id: string; text: string; order: number }[];
+  };
+}
+
+export interface StageQuestions {
+  interviewId: string;
+  stage: { id: string; name: string; order: number };
+  runtimeStage: { id: string; order: number; status: string };
+  questions: CurrentQuestion['question'][];
+}
+
+export interface RubricCriterion {
+  id: string;
+  name: string;
+  description: string | null;
+  maxScore: number;
+}
+
+export interface QuestionDetails {
+  interviewId: string;
+  question: CurrentQuestion['question'];
+  rubricCriteria: RubricCriterion[];
+  stageVersion: { id: string; name: string; order: number };
+}
+
+export interface InterviewProgress {
+  interviewId: string;
+  interviewStatus: string;
+  progress: InterviewState['progress'];
+  stages: {
+    id: string;
+    order: number;
+    status: string;
+    pipelineStageVersionId: string;
+    isCurrent: boolean;
+  }[];
+  currentStageId: string | null;
+}
+
 export interface AuditEvent {
   id: string;
   organizationId: string;

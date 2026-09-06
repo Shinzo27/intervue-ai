@@ -40,6 +40,8 @@ interface Seeded {
   stageVersionIds: string[];
   questionVersionIds: string[];
   criterionVersionIds: string[];
+  foreignStageVersionId: string;
+  foreignQuestionVersionId: string;
   jobId: string;
   candidateId: string;
   applicationId: string;
@@ -168,6 +170,30 @@ describe('Internal API (e2e)', () => {
       },
     });
 
+    // Foreign pipeline (B): never attached to any interview. Used to prove
+    // the cross-interview ownership guard on stage/question read endpoints.
+    const pipelineB = await prisma.pipeline.create({
+      data: {
+        name: 'Foreign Pipeline',
+        organizationId: organization.id,
+        createdById: interviewer.id,
+      },
+    });
+    const pipelineVersionB = await prisma.pipelineVersion.create({
+      data: { pipelineId: pipelineB.id, version: 1 },
+    });
+    const stageVersionB = await prisma.pipelineStageVersion.create({
+      data: { pipelineVersionId: pipelineVersionB.id, name: 'Foreign Stage', order: 1 },
+    });
+    const foreignQuestion = await prisma.questionVersion.create({
+      data: {
+        pipelineStageVersionId: stageVersionB.id,
+        question: 'Foreign question',
+        type: 'MULTI_LINE',
+        order: 1,
+      },
+    });
+
     const pipelineVersion = await prisma.pipelineVersion.create({
       data: { pipelineId: pipeline.id, version: 1 },
     });
@@ -288,6 +314,8 @@ describe('Internal API (e2e)', () => {
       stageVersionIds: [stageA.id, stageB.id],
       questionVersionIds: [q1.id, q2.id, q3.id],
       criterionVersionIds: [rubric1.id, rubric2.id, rubric3.id],
+      foreignStageVersionId: stageVersionB.id,
+      foreignQuestionVersionId: foreignQuestion.id,
       jobId: job.id,
       candidateId: candidate.id,
       applicationId: application.id,
@@ -340,6 +368,53 @@ describe('Internal API (e2e)', () => {
       totalQuestions: 3,
       answeredQuestions: 0,
     });
+
+    // ---- 1b. pipeline read endpoints (question / stage / details / progress)
+    const cq = await get(
+      `/api/internal/interviews/${interviewId}/current-question`,
+    );
+    expect(cq.status).toBe(200);
+    expect(cq.body.question.id).toBe(seeded.questionVersionIds[0]);
+    expect(cq.body.stageName).toBe('Technical');
+
+    const sq = await get(
+      `/api/internal/interviews/${interviewId}/stages/${seeded.stageVersionIds[0]}/questions`,
+    );
+    expect(sq.status).toBe(200);
+    expect(sq.body.questions.map((q: { id: string }) => q.id)).toEqual([
+      seeded.questionVersionIds[0],
+      seeded.questionVersionIds[1],
+    ]);
+
+    const qd = await get(
+      `/api/internal/interviews/${interviewId}/questions/${seeded.questionVersionIds[0]}`,
+    );
+    expect(qd.status).toBe(200);
+    expect(qd.body.rubricCriteria.map((c: { id: string }) => c.id)).toEqual([
+      seeded.criterionVersionIds[0],
+      seeded.criterionVersionIds[1],
+    ]);
+
+    const pr = await get(`/api/internal/interviews/${interviewId}/progress`);
+    expect(pr.status).toBe(200);
+    expect(pr.body.progress).toMatchObject({
+      totalStages: 2,
+      totalQuestions: 3,
+    });
+    expect(
+      pr.body.stages.filter((s: { isCurrent: boolean }) => s.isCurrent),
+    ).toHaveLength(1);
+
+    // Cross-interview ownership guard: foreign stage/question are rejected.
+    const foreignStage = await get(
+      `/api/internal/interviews/${interviewId}/stages/${seeded.foreignStageVersionId}/questions`,
+    );
+    expect(foreignStage.status).toBe(404);
+
+    const foreignQuestion = await get(
+      `/api/internal/interviews/${interviewId}/questions/${seeded.foreignQuestionVersionId}`,
+    );
+    expect(foreignQuestion.status).toBe(404);
 
     // ---- 2. transcript has the seeded assistant question
     const transcript1 = await get(
