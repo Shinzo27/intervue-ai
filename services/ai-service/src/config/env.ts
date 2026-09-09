@@ -13,8 +13,21 @@ const envSchema = z.object({
   MCP_HTTP_PORT: z.coerce.number().int().positive().default(3100),
 
   // Optional bearer token protecting the HTTP transport. When unset the
-  // transport binds without auth (dev only) and logs a warning.
+  // transport binds without auth (dev without auth) and logs a warning.
   MCP_HTTP_TOKEN: z.string().min(1).optional(),
+
+  // --- LLM providers -----------------------------------------------------
+  // LLM_PROVIDER selects the active adapter: fake | openai | groq.
+  LLM_PROVIDER: z.enum(['fake', 'openai', 'groq']).default('fake'),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  GROQ_API_KEY: z.string().min(1).optional(),
+  GROQ_MODEL: z.string().default('llama-3.1-8b-instant'),
+
+  // Two-model scoring: the secondary provider for cross-checking. Requires
+  // its key to be present when enabled.
+  LLM_SECONDARY_PROVIDER: z.enum(['none', 'openai', 'groq']).default('none'),
+  LLM_SECONDARY_MODEL: z.string().optional(),
 
   NODE_ENV: z.string().default('development'),
 });
@@ -34,5 +47,31 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     );
   }
 
-  return parsed.data;
+  const env = parsed.data;
+
+  // Provider-key cross-checks
+  if (env.LLM_PROVIDER === 'openai' && !env.OPENAI_API_KEY) {
+    throw new Error('LLM_PROVIDER=openai requires OPENAI_API_KEY');
+  }
+  if (env.LLM_PROVIDER === 'groq' && !env.GROQ_API_KEY) {
+    throw new Error('LLM_PROVIDER=groq requires GROQ_API_KEY');
+  }
+  if (env.LLM_SECONDARY_PROVIDER !== 'none') {
+    const key =
+      env.LLM_SECONDARY_PROVIDER === 'openai'
+        ? env.OPENAI_API_KEY
+        : env.GROQ_API_KEY;
+    if (!key) {
+      throw new Error(
+        `LLM_SECONDARY_PROVIDER=${env.LLM_SECONDARY_PROVIDER} requires the matching API key`,
+      );
+    }
+    if (env.LLM_SECONDARY_PROVIDER === env.LLM_PROVIDER) {
+      throw new Error(
+        'Two-model scoring requires two DIFFERENT providers (e.g. primary openai, secondary groq)',
+      );
+    }
+  }
+
+  return env;
 }

@@ -147,6 +147,46 @@ export interface InterviewProgress {
   currentStageId: string | null;
 }
 
+export interface AnswerContext {
+  answer: {
+    id: string;
+    type: string;
+    content: string;
+    submittedAt: string;
+  };
+  questionVersion: {
+    id: string;
+    order: number;
+    type: string;
+    required: boolean;
+    question: string;
+    options: { id: string; text: string; order: number }[];
+  };
+  rubricCriteria: RubricCriterion[];
+  interview: { id: string; status: string };
+  application: {
+    id: string;
+    organizationId: string;
+    candidate: { id: string; firstName: string; lastName: string };
+  };
+}
+
+export interface ApplicationScoreRow {
+  id: string;
+  applicationId: string;
+  questionVersionId: string;
+  overallScore: number;
+  maxScore: number;
+  reasoning: string | null;
+  criterionScores: {
+    id: string;
+    rubricCriterionVersionId: string;
+    score: number;
+    reasoning: string | null;
+    rubricCriterionVersion: { id: string; name: string; maxScore: number };
+  }[];
+}
+
 export interface AuditEvent {
   id: string;
   organizationId: string;

@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type {
   AIEvaluation,
+  AnswerContext,
+  ApplicationScoreRow,
   AuditEvent,
   CurrentQuestion,
   InterviewProgress,
@@ -277,6 +279,22 @@ export class BackendClient {
     return this.request<ScoreSummary>(
       'GET',
       `/applications/${encodeURIComponent(applicationId)}/score-summary`,
+      { traceId },
+    );
+  }
+
+  getAnswerContext(answerId: string, traceId?: string) {
+    return this.request<AnswerContext>(
+      'GET',
+      `/answers/${encodeURIComponent(answerId)}/context`,
+      { traceId },
+    );
+  }
+
+  listApplicationScores(applicationId: string, traceId?: string) {
+    return this.request<ApplicationScoreRow[]>(
+      'GET',
+      `/applications/${encodeURIComponent(applicationId)}/scores`,
       { traceId },
     );
   }

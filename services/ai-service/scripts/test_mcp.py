@@ -218,6 +218,63 @@ status, body = post(rpc("tools/call", 10, {
 err = tool_payload(body)["error"]
 check("unknown stage -> structured 404", err["kind"] == "backend_error" and err["status"] == 404)
 
+# ------------------------------------------------------- 2c. Scoring MCP tools
+
+print("\n== Scoring MCP tools ==")
+
+match_ans = re.search(r"firstAnswerId=([0-9a-f-]{36})", run.stdout)
+first_answer_id = match_ans.group(1) if match_ans else None
+match_app = re.search(r"applicationId=([0-9a-f-]{36})", run.stdout)
+application_id = match_app.group(1) if match_app else None
+
+if first_answer_id:
+    status, body = post(rpc("tools/call", 11, {
+        "name": "evaluate_answer",
+        "arguments": {"answerId": first_answer_id},
+    }))
+    ev = tool_payload(body)
+    if ev["ok"]:
+        res = ev["result"]
+        check(
+            "evaluate_answer (fake provider)",
+            res["ok"] is True
+            and res["overallScore"] is not None
+            and res["needsHumanReview"] is False
+            and len(res["modelResults"]) == 1
+            and res["modelResults"][0]["status"] == "COMPLETED",
+            f"score={res['overallScore']}/{res['maxScore']} models={[m['provider'] for m in res['modelResults']]}",
+        )
+    else:
+        check("evaluate_answer (fake provider)", False, json.dumps(ev)[:200])
+
+    # persisted score rows via the read tool
+    status, body = post(rpc("tools/call", 12, {
+        "name": "get_application_scores",
+        "arguments": {"applicationId": application_id},
+    }))
+    rows = tool_payload(body)["result"]
+    check(
+        "get_application_scores",
+        status == 200 and isinstance(rows, list) and len(rows) >= 1
+        and rows[0]["questionVersionId"] == json.loads(
+            post(rpc("tools/call", 13, {
+                "name": "get_question_details",
+                "arguments": {"interviewId": interview_id, "questionVersionId": rows[0]["questionVersionId"]},
+            }))[1]["result"]["content"][0]["text"]
+        )["question"]["id"],
+        f"{len(rows)} score row(s)",
+    )
+
+    # unknown answer -> structured 404 from the scoring loop
+    status, body = post(rpc("tools/call", 14, {
+        "name": "evaluate_answer",
+        "arguments": {"answerId": "00000000-0000-4000-8000-999999999999"},
+    }))
+    err2 = tool_payload(body)["error"]
+    check("unknown answer -> structured 404", err2["kind"] == "backend_error" and err2["status"] == 404)
+else:
+    check("scoring tools (firstAnswerId missing from runner output)", False)
+
 # ------------------------------------------------------------ 3. stdio transport
 
 print("\n== stdio transport ==")

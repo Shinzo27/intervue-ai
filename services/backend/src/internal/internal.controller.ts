@@ -152,6 +152,18 @@ export class InternalController {
     return this.internalService.getApplicationScoreSummary(id);
   }
 
+  @Get('answers/:id/context')
+  @ApiResponseFormat()
+  async getAnswerContext(@Param('id') id: string) {
+    return this.internalService.getAnswerContext(id);
+  }
+
+  @Get('applications/:id/scores')
+  @ApiResponseFormat()
+  async listApplicationScores(@Param('id') id: string) {
+    return this.internalService.listApplicationScores(id);
+  }
+
   // --------------------------------------------------------------- actions
 
   @Post('interviews/:id/complete')

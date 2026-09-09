@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { loadEnv } from './config/env.js';
 import { BackendClient } from './backend/client.js';
+import { buildPrimaryProvider, buildSecondaryProvider } from './llm/factory.js';
+import { ScoringOrchestrator } from './scoring/scoring.service.js';
 import { createMcpServer } from './mcp/server.js';
 import { startHttpTransport } from './mcp/transports/http.js';
 import { startStdioTransport } from './mcp/transports/stdio.js';
@@ -13,7 +15,16 @@ async function bootstrap(): Promise<void> {
     token: env.BACKEND_INTERNAL_TOKEN,
   });
 
-  const { server, registry } = createMcpServer({ client });
+  const primary = buildPrimaryProvider(env);
+  const secondary = buildSecondaryProvider(env);
+  console.error(
+    `[mcp] llm: primary=${primary.name}:${primary.model}` +
+      (secondary ? ` secondary=${secondary.name}:${secondary.model}` : ' (single-model)'),
+  );
+
+  const orchestrator = new ScoringOrchestrator(client, primary, secondary);
+
+  const { server, registry } = createMcpServer({ client, orchestrator });
 
   const mode = process.argv[2] ?? 'http';
 

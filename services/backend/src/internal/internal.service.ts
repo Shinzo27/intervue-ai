@@ -712,6 +712,100 @@ export class InternalService {
     };
   }
 
+  /**
+   * Full scoring context for one answer: the frozen question version
+   * (verbatim text + options), its rubric criteria, and the answer content.
+   * Scoring MCP uses this to build the evaluation prompt — the backend is
+   * the source of truth, so the agent never echoes caller-supplied text.
+   */
+  async getAnswerContext(answerId: string) {
+    if (!UUID_RE.test(answerId)) {
+      throw new BadRequestException('answerId must be a UUID');
+    }
+
+    const answer = await this.prisma.answer.findUnique({
+      where: { id: answerId },
+      include: {
+        interviewSession: {
+          select: {
+            id: true,
+            status: true,
+            application: {
+              select: {
+                id: true,
+                organizationId: true,
+                candidate: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
+          },
+        },
+        questionVersion: {
+          include: {
+            options: { orderBy: { order: 'asc' }, select: { id: true, text: true, order: true } },
+            rubricCriteria: {
+              orderBy: { name: 'asc' },
+              select: { id: true, name: true, description: true, maxScore: true },
+            },
+          },
+        },
+      },
+    });
+    if (!answer) {
+      throw new NotFoundException('Answer not found');
+    }
+
+    return {
+      answer: {
+        id: answer.id,
+        type: answer.type,
+        content: answer.content,
+        submittedAt: answer.submittedAt,
+      },
+      questionVersion: {
+        id: answer.questionVersion.id,
+        order: answer.questionVersion.order,
+        type: answer.questionVersion.type,
+        required: answer.questionVersion.required,
+        question: answer.questionVersion.question,
+        options: answer.questionVersion.options,
+      },
+      rubricCriteria: answer.questionVersion.rubricCriteria,
+      interview: {
+        id: answer.interviewSession.id,
+        status: answer.interviewSession.status,
+      },
+      application: {
+        id: answer.interviewSession.application.id,
+        organizationId: answer.interviewSession.application.organizationId,
+        candidate: answer.interviewSession.application.candidate,
+      },
+    };
+  }
+
+  /**
+   * All score rows (with criterion breakdowns) for one application — the
+   * input to decision generation. Ordered by creation.
+   */
+  async listApplicationScores(applicationId: string) {
+    if (!UUID_RE.test(applicationId)) {
+      throw new BadRequestException('applicationId must be a UUID');
+    }
+
+    const application = await this.prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { id: true },
+    });
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    return this.prisma.score.findMany({
+      where: { applicationId },
+      include: { criterionScores: { include: { rubricCriterionVersion: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   // ---------------------------------------------------------------- actions
 
   /**

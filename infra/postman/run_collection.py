@@ -184,7 +184,7 @@ for q in stage_questions:
         break
 first_answer_id = require_id(first_answer_id, "answerId")
 first_question_id = require_id(stage_questions[0].get("id"), "questionVersionId")
-print(f"     answers submitted: {answers_submitted}, interviewCompleted: {interview_completed}")
+print(f"     answers submitted: {answers_submitted}, interviewCompleted: {interview_completed}, firstAnswerId={first_answer_id}")
 
 # ------------------------------------------ 16 internal capability surface
 

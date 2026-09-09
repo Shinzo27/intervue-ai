@@ -584,6 +584,26 @@ describe('Internal API (e2e)', () => {
     expect(summary.body.maxScore).toBe(8);
     expect(summary.body.questionCount).toBe(1);
 
+    // ---- 7b. answer scoring context (source of truth for the LLM prompt)
+    const answerCtx = await get(`/api/internal/answers/${answerRow.id}/context`);
+    expect(answerCtx.status).toBe(200);
+    expect(answerCtx.body.answer.id).toBe(answerRow.id);
+    expect(answerCtx.body.questionVersion.id).toBe(seeded.questionVersionIds[0]);
+    expect(answerCtx.body.rubricCriteria.length).toBe(2);
+    expect(answerCtx.body.application.organizationId).toBe(seeded.organizationId);
+
+    const badAnswerCtx = await get('/api/internal/answers/00000000-0000-4000-8000-999999999999/context');
+    expect(badAnswerCtx.status).toBe(404);
+
+    // ---- 7c. application score rows for decision generation
+    const appScores = await get(
+      `/api/internal/applications/${seeded.applicationId}/scores`,
+    );
+    expect(appScores.status).toBe(200);
+    expect(appScores.body).toBeInstanceOf(Array);
+    expect(appScores.body.length).toBe(1);
+    expect(appScores.body[0].criterionScores.length).toBe(2);
+
     // ---- 8. finish the interview via the public answer flow
     // Q2 (last question of stage 1) → stage 2 becomes current
     const ans2 = await post(`/api/internal/interviews/${interviewId}/answers`, {
