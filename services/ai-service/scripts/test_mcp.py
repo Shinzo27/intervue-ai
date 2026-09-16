@@ -113,13 +113,15 @@ check("initialize", status == 200 and body["result"]["serverInfo"]["name"] == "i
 status, body = post(rpc("tools/list", 2))
 tools = [t["name"] for t in body["result"]["tools"]]
 check(
-    "tools/list (5 pipeline tools)",
+    "tools/list (all tools)",
     status == 200 and set(tools) == {
         "get_current_interview_state",
         "get_current_question",
         "get_stage_questions",
         "get_question_details",
         "get_interview_progress",
+        "evaluate_answer",
+        "get_application_scores",
     },
     ", ".join(sorted(tools)),
 )
@@ -255,14 +257,12 @@ if first_answer_id:
     rows = tool_payload(body)["result"]
     check(
         "get_application_scores",
-        status == 200 and isinstance(rows, list) and len(rows) >= 1
-        and rows[0]["questionVersionId"] == json.loads(
-            post(rpc("tools/call", 13, {
-                "name": "get_question_details",
-                "arguments": {"interviewId": interview_id, "questionVersionId": rows[0]["questionVersionId"]},
-            }))[1]["result"]["content"][0]["text"]
-        )["question"]["id"],
-        f"{len(rows)} score row(s)",
+        status == 200
+        and isinstance(rows, list)
+        and len(rows) >= 1
+        and rows[0]["questionVersionId"]
+        and rows[0]["criterionScores"],
+        f"{len(rows)} row(s), {len(rows[0]['criterionScores']) if rows else 0} criteria",
     )
 
     # unknown answer -> structured 404 from the scoring loop

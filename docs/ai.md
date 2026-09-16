@@ -75,6 +75,8 @@ Phase tags refer to the completion plan. ✅ = implemented.
 | `get_stage_questions` ✅ | All questions for a stage version, in order (ownership-checked against the interview) | 3 |
 | `get_question_details` ✅ | Question + options + rubric criteria (ownership-checked) | 3 |
 | `get_interview_progress` ✅ | Stage-by-stage runtime map + answered/total counters | 3 |
+| `evaluate_answer` ✅ | Two-model rubric evaluation → AIEvaluation rows + Score + criteria (disagreement → human review) | 4 |
+| `get_application_scores` ✅ | Persisted question scores with criterion breakdowns | 4 |
 
 ### MCP server foundation (Phase 2 — implemented)
 
