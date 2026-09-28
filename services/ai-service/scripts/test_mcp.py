@@ -58,8 +58,20 @@ def post(body: dict, auth: bool = True) -> tuple[int, dict]:
 
 
 def tool_payload(response_body: dict) -> dict:
-    """Unwrap {result:{content:[{text}]}} -> the JSON the tool returned."""
-    return json.loads(response_body["result"]["content"][0]["text"])
+    """Unwrap {result:{content:[{text}]}} -> the JSON the tool returned.
+
+    A schema-level rejection (bad argument type) comes back from the MCP SDK
+    as plain text rather than our JSON envelope, so surface it as a readable
+    failure instead of killing the whole run with a JSONDecodeError.
+    """
+    try:
+        text = response_body["result"]["content"][0]["text"]
+    except (KeyError, IndexError, TypeError):
+        return {"ok": False, "error": {"message": f"unexpected MCP envelope: {response_body}"}}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {"ok": False, "error": {"message": f"non-JSON tool response: {text[:400]}"}}
 
 
 # ---------------------------------------------------------- 1. seed an interview
@@ -112,18 +124,28 @@ check("initialize", status == 200 and body["result"]["serverInfo"]["name"] == "i
 
 status, body = post(rpc("tools/list", 2))
 tools = [t["name"] for t in body["result"]["tools"]]
+EXPECTED_TOOLS = {
+    # Pipeline MCP (read-only)
+    "get_current_interview_state",
+    "get_current_question",
+    "get_stage_questions",
+    "get_question_details",
+    "get_interview_progress",
+    # Scoring MCP
+    "evaluate_answer",
+    "get_application_scores",
+    # Action MCP (permission-checked state changes)
+    "advance_interview",
+    "complete_interview",
+    "create_decision",
+    "request_human_review",
+    "create_audit_event",
+}
 check(
     "tools/list (all tools)",
-    status == 200 and set(tools) == {
-        "get_current_interview_state",
-        "get_current_question",
-        "get_stage_questions",
-        "get_question_details",
-        "get_interview_progress",
-        "evaluate_answer",
-        "get_application_scores",
-    },
-    ", ".join(sorted(tools)),
+    status == 200 and set(tools) == EXPECTED_TOOLS,
+    f"{len(tools)} tools; missing={sorted(EXPECTED_TOOLS - set(tools))} "
+    f"unexpected={sorted(set(tools) - EXPECTED_TOOLS)}",
 )
 
 status, body = post(rpc("tools/call", 3, {
@@ -228,6 +250,11 @@ match_ans = re.search(r"firstAnswerId=([0-9a-f-]{36})", run.stdout)
 first_answer_id = match_ans.group(1) if match_ans else None
 match_app = re.search(r"applicationId=([0-9a-f-]{36})", run.stdout)
 application_id = match_app.group(1) if match_app else None
+# The runner prints "organizationId = <uuid>" (with spaces) and also an
+# "applicationIdC = <uuid>" line; anchor on the spaced form to avoid matching
+# the wrong id.
+match_org = re.search(r"organizationId\s*=\s*([A-Za-z0-9_-]{20,40})", run.stdout)
+organization_id = match_org.group(1) if match_org else None
 
 if first_answer_id:
     status, body = post(rpc("tools/call", 11, {
@@ -274,6 +301,148 @@ if first_answer_id:
     check("unknown answer -> structured 404", err2["kind"] == "backend_error" and err2["status"] == 404)
 else:
     check("scoring tools (firstAnswerId missing from runner output)", False)
+
+# ------------------------------------------------ 2b. Action MCP (state changes)
+
+print("\n== Action MCP tools (permission-checked) ==")
+
+if application_id:
+    # advance_interview on the in-progress interview: must return the
+    # backend-authoritative position without mutating anything itself.
+    status, body = post(rpc("tools/call", 20, {
+        "name": "advance_interview",
+        "arguments": {"interviewId": interview_id2},
+    }))
+    payload = tool_payload(body)
+    adv = payload.get("result", {})
+    check(
+        "advance_interview returns authoritative position",
+        payload.get("ok") is True
+        and adv.get("interviewId") == interview_id2
+        and adv.get("status") == "IN_PROGRESS"
+        and "currentStage" in adv
+        and "progress" in adv,
+        f"stage={(adv.get('currentStage') or {}).get('name')!r} "
+        f"question={(adv.get('currentQuestion') or {}).get('order')}",
+    )
+
+    # Wrong-organization scope must be rejected by the permission layer (§64).
+    status, body = post(rpc("tools/call", 21, {
+        "name": "advance_interview",
+        "arguments": {
+            "interviewId": interview_id2,
+            "expectedOrganizationId": "00000000-0000-4000-8000-000000000001",
+        },
+    }))
+    payload = tool_payload(body)
+    denied = payload.get("error", {})
+    check(
+        "advance_interview blocks cross-org scope",
+        payload.get("ok") is False
+        and "different organization" in str(denied.get("message", "")),
+        str(denied.get("message", ""))[:80],
+    )
+
+    # advance on a COMPLETED interview must be refused (state validation).
+    status, body = post(rpc("tools/call", 22, {
+        "name": "advance_interview",
+        "arguments": {"interviewId": interview_id},
+    }))
+    payload = tool_payload(body)
+    check(
+        "advance_interview rejects non-IN_PROGRESS interview",
+        payload.get("ok") is False and "only IN_PROGRESS" in str(
+            payload.get("error", {}).get("message", "")
+        ),
+        str(payload.get("error", {}).get("message", ""))[:80],
+    )
+
+    # request_human_review persists an auditable flag event.
+    status, body = post(rpc("tools/call", 23, {
+        "name": "request_human_review",
+        "arguments": {
+            "applicationId": application_id,
+            "reason": "e2e: two-model disagreement beyond threshold",
+        },
+    }))
+    payload = tool_payload(body)
+    rev = payload.get("result", {})
+    check(
+        "request_human_review writes an audit-backed flag",
+        payload.get("ok") is True
+        and rev.get("requested") is True
+        and rev.get("auditEventId"),
+        f"auditEventId={str(rev.get('auditEventId'))[:8]}…",
+    )
+
+    # create_decision: threshold-derived PASS/FAIL from persisted scores.
+    status, body = post(rpc("tools/call", 24, {
+        "name": "create_decision",
+        "arguments": {"applicationId": application_id, "thresholdPct": 70},
+    }))
+    payload = tool_payload(body)
+    dec = payload.get("result", {})
+    rec = dec.get("recommendation", {})
+    check(
+        "create_decision derives outcome from threshold",
+        payload.get("ok") is True
+        and rec.get("outcome") in ("PASS", "FAIL")
+        and rec.get("thresholdPct") == 70
+        and dec.get("decision", {}).get("id"),
+        f"outcome={rec.get('outcome')} pct={rec.get('percentage')}",
+    )
+
+    # A second decision must be refused — the AI can never silently overwrite.
+    status, body = post(rpc("tools/call", 25, {
+        "name": "create_decision",
+        "arguments": {"applicationId": application_id, "thresholdPct": 70},
+    }))
+    payload = tool_payload(body)
+    err_dec = payload.get("error", {})
+    check(
+        "create_decision never overwrites an existing decision",
+        payload.get("ok") is False and err_dec.get("status") == 400,
+        str(err_dec.get("message", ""))[:80],
+    )
+
+    # complete_interview is idempotent.
+    status, body = post(rpc("tools/call", 26, {
+        "name": "complete_interview",
+        "arguments": {"interviewId": interview_id},
+    }))
+    payload = tool_payload(body)
+    res = payload.get("result", {})
+    check(
+        "complete_interview is idempotent",
+        payload.get("ok") is True
+        and res.get("alreadyCompleted") is True,
+        f"status={res.get('status')}",
+    )
+
+    # create_audit_event writes an AI-attributed record.
+    status, body = post(rpc("tools/call", 27, {
+        "name": "create_audit_event",
+        "arguments": {
+            "organizationId": organization_id,
+            "action": "E2E_ACTION_PROBE",
+            "entityType": "InterviewSession",
+            "entityId": interview_id2,
+            "metadata": {"probe": True},
+        },
+    }))
+    payload = tool_payload(body)
+    ev = payload.get("result", {})
+    check(
+        "create_audit_event records tool+capability metadata",
+        payload.get("ok") is True
+        and ev.get("actorType") == "AI"
+        and (ev.get("metadata") or {}).get("capability") == "audit:write"
+        and (ev.get("metadata") or {}).get("tool") == "create_audit_event"
+        and (ev.get("metadata") or {}).get("traceId"),
+        f"action={ev.get('action')} metadata_keys={sorted((ev.get('metadata') or {}).keys())}",
+    )
+else:
+    check("action tools (applicationId missing from runner output)", False)
 
 # ------------------------------------------------------------ 3. stdio transport
 

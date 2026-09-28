@@ -113,20 +113,38 @@ Phase tags refer to the completion plan. ✅ = implemented.
 | `compute_application_score` | Aggregate question scores → application-level total (rubric-max weighted) | 4 |
 | `get_score` | Retrieve persisted question/application scores | 4 |
 
-### Action MCP
+### Action MCP (implemented)
 
-| Tool | Purpose | Phase |
+| Tool | Capability | Purpose |
 |---|---|---|
-| `advance_interview` | Progress question/stage pointers (validated transitions only) | 5 |
-| `complete_interview` | Mark session + application completed | 5 |
-| `create_decision` | Persist AI/system recommendation (distinct from human decisions) | 6 |
-| `request_human_review` | Flag an application for recruiter review (used on model disagreement) | 5 |
-| `create_audit_event` | Append an AI-attributed audit record | 5 |
+| `advance_interview` | `interview:advance` | Validate an `IN_PROGRESS` interview and return the backend-authoritative position (stage, question, progress) |
+| `complete_interview` | `interview:complete` | Mark session + application completed (idempotent) |
+| `create_decision` | `decision:recommend` | Derive PASS/FAIL from persisted scores against a pass threshold (default 70%) and persist the recommendation |
+| `request_human_review` | `review:request` | Flag an application for recruiter review (model disagreement / failed evaluation) |
+| `create_audit_event` | `audit:write` | Append an AI-attributed audit record |
+
+**On `advance_interview`:** question → stage → interview progression is performed
+transactionally by the backend inside `submitAnswer` (`interviews.service.ts`), which is
+the sole authority for it. The tool therefore validates state, enforces org scope and
+audits the step, then returns the backend's authoritative current position — it does not
+re-implement progression in the AI service, which would fork the state machine.
+
+**Review flags persist in the audit log.** `request_human_review` writes a
+`HUMAN_REVIEW_REQUESTED` audit event; there is no mutable flag column, so the recruiter
+UI surfaces flags by querying audit events for the organization.
 
 ### Permission matrix (Action MCP)
 
+Implemented in `src/mcp/action/permissions.ts`. Deny-by-default and evaluated in a fixed
+order — forbidden → not granted → org scope — so rejections are deterministic and auditable.
+
 - AI **may**: advance interview state, persist evaluations/scores, create AI recommendations, flag for review, audit.
 - AI **may never**: override a human decision, modify published pipeline snapshots, access other organizations' data, delete audit history, or bypass state-transition validation.
+- `decision:override` is **structurally ungrantable**: it is absent from the grant table and listed in `FORBIDDEN_CAPABILITIES`, so a future edit that merely adds a capability cannot accidentally hand the AI override rights.
+- Org scope is deny-by-default at the call site: a tool that cannot verify the resource's owning organization refuses to act.
+
+Every permitted action records `{ tool, actorType, actorId, capability, traceId }` in its
+audit metadata.
 
 ---
 

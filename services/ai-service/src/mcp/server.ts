@@ -4,6 +4,7 @@ import type { ScoringOrchestrator } from '../scoring/scoring.service.js';
 import { ToolRegistry } from './registry.js';
 import { buildPipelineTools } from './pipeline/pipeline.tools.js';
 import { buildScoringTools } from './scoring/scoring.tools.js';
+import { buildActionTools } from './action/action.tools.js';
 
 export interface McpToolContext {
   client: BackendClient;
@@ -26,13 +27,18 @@ export function createMcpServer({ client, orchestrator }: McpToolContext): {
   for (const tool of buildScoringTools(orchestrator)) {
     registry.register(tool);
   }
+  for (const tool of buildActionTools(client)) {
+    registry.register(tool);
+  }
 
   const server = new McpServer(
     { name: 'intervue-ai-mcp', version: '0.1.0' },
     {
       instructions:
         'Intervue AI interview tools. The pipeline snapshot is the source of truth for interview ' +
-        'structure. Read tools are safe; state-changing tools will arrive with the Action MCP.',
+        'structure. Read tools are safe. State-changing Action tools are permission-checked: ' +
+        'they may advance and complete interviews and create AI recommendations, but they can ' +
+        'never change a human decision or modify a published pipeline snapshot.',
     },
   );
 

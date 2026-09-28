@@ -704,6 +704,9 @@ export class InternalService {
 
     return {
       applicationId,
+      // Callers (Action MCP) org-scope decisions against the owning org, so the
+      // summary must carry it — otherwise the check silently no-ops.
+      organizationId: application.organizationId,
       totalScore,
       maxScore,
       percentage: pct,

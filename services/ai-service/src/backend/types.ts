@@ -90,6 +90,8 @@ export interface Score {
 
 export interface ScoreSummary {
   applicationId: string;
+  /** Owning organization — required by the Action MCP org-scope check. */
+  organizationId?: string;
   totalScore: number;
   maxScore: number;
   percentage: number;

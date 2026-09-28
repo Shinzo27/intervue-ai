@@ -109,6 +109,7 @@ org = call("Create Organization", "POST", "/api/auth/organization/create",
 org_id = require_id(data_of(org).get("id"), "organizationId")
 call("Set Active Organization", "POST", "/api/auth/organization/set-active",
      body={"organizationId": org_id})
+print(f"     organizationId = {org_id}")
 
 # ------------------------------------------------------------- 03 pipelines
 
@@ -238,9 +239,10 @@ print(f"     summary: total={summary.get('totalScore')}, max={summary.get('maxSc
 
 icall("Internal: Complete Interview (idempotent)", "POST", f"/interviews/{interview_id}/complete")
 
-icall("Internal: Create Decision", "POST", f"/applications/{application_id}/decision",
-      body={"outcome": "PASS", "totalScore": 7, "maxScore": 8,
-            "reasoning": "runner decision", "requestedBy": "collection-runner"})
+# NOTE: no decision is created for application A here on purpose — the
+# permission-checked Action MCP layer (create_decision) owns that path, so the
+# e2e suite can prove it derives an outcome from real scores. The raw internal
+# endpoint is still smoke-tested, against application C below.
 
 icall("Internal: Create Audit Event", "POST", "/audit-events",
       body={"organizationId": org_id, "actorType": "AI", "actorId": "collection-runner",
@@ -263,6 +265,24 @@ iv2 = data_of(call("Create Interview B", "POST", "/api/interviews",
 interview_id2 = require_id(iv2.get("id"), "interviewIdB")
 call("Start Interview B", "POST", f"/api/interviews/{interview_id2}/start")
 print(f"     secondInterviewId = {interview_id2} (in-progress, 0 answers)")
+
+# ------------------------- application C: unscored, used for the decision guard
+
+inv3_data = data_of(call("Invite Candidate C", "POST", "/api/applications/invite",
+                          body={"firstName": "Alan", "lastName": "Turing",
+                                "email": f"alan-{RUN_TAG}@intervue.test", "jobPostingId": job_id}))
+application_id3 = require_id(
+    inv3_data.get("id") or (inv3_data.get("application") or {}).get("id", ""),
+    "applicationIdC")
+print(f"     applicationIdC = {application_id3} (no interview, no scores)")
+
+icall("Internal: Create Decision", "POST", f"/applications/{application_id3}/decision",
+      body={"outcome": "PASS", "totalScore": 7, "maxScore": 8,
+            "reasoning": "runner decision", "requestedBy": "collection-runner"})
+icall("Internal: Create Decision (duplicate must fail)", "POST",
+      f"/applications/{application_id3}/decision",
+      body={"outcome": "FAIL", "totalScore": 1, "maxScore": 8, "requestedBy": "collection-runner"},
+      expect=(400,))
 
 # ------------------------------------------------------------------- report
 
