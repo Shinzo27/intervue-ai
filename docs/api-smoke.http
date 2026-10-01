@@ -1,0 +1,242 @@
+# Intervue AI — API smoke-test sequence
+#
+# The 24-step end-to-end flow from master-note §66, as a runnable HTTP file
+# (VS Code REST Client / JetBrains HTTP Client format).
+#
+# HOW TO USE
+#   1. Start the backend + Postgres:  pnpm --filter backend start:dev
+#   2. Set @internalToken below from services/backend/.env (INTERNAL_SERVICE_SECRET).
+#   3. Run the requests top to bottom. Steps that mint an id print it in the
+#      response — paste it into the matching @variable at the top before the
+#      next step that needs it.
+#
+# A plain .http file cannot chain response values portably across clients, so
+# for the fully automated, self-chaining version of this same sequence use
+# `python infra/postman/run_collection.py` (56 assertions). That runner is the
+# regression gate; this file is the readable specification and demo script.
+
+@base = http://localhost:3000
+@internalToken = REPLACE_WITH_INTERNAL_SERVICE_SECRET
+
+# --- ids produced by earlier steps (paste as you go) -------------------------
+@orgId =
+@pipelineId =
+@stage1Id =
+@stage2Id =
+@questionVersionId =
+@jobPostingId =
+@applicationId =
+@inviteToken =
+@interviewId =
+@answerId =
+@evaluationId =
+@decisionId =
+
+# A fresh email per run keeps the script re-runnable.
+@email = smoke-{{$timestamp}}@intervue.test
+@password = RunnerSecure!2026
+
+
+### 1. Authentication — sign up
+POST {{base}}/api/auth/sign-up/email
+Content-Type: application/json
+Origin: http://localhost:3001
+
+{ "email": "{{email}}", "password": "{{password}}", "name": "Smoke Runner" }
+
+
+### 1b. Authentication — sign in (cookies now held by the client)
+POST {{base}}/api/auth/sign-in/email
+Content-Type: application/json
+Origin: http://localhost:3001
+
+{ "email": "{{email}}", "password": "{{password}}" }
+
+
+### 2. Create organization  → capture id as @orgId
+POST {{base}}/api/auth/organization/create
+Content-Type: application/json
+Origin: http://localhost:3001
+
+{ "name": "Smoke Org", "slug": "smoke-org-{{$timestamp}}" }
+
+
+### 2b. Set the organization active (required before any org-scoped call)
+POST {{base}}/api/auth/organization/set-active
+Content-Type: application/json
+Origin: http://localhost:3001
+
+{ "organizationId": "{{orgId}}" }
+
+
+### 3. Create pipeline  → @pipelineId
+POST {{base}}/api/pipelines
+Content-Type: application/json
+
+{ "name": "Backend Interview" }
+
+
+### 4. Add stages  → @stage1Id, @stage2Id
+POST {{base}}/api/pipelines/{{pipelineId}}/stages
+Content-Type: application/json
+
+{ "name": "Technical", "order": 1 }
+
+### 4b. Second stage
+POST {{base}}/api/pipelines/{{pipelineId}}/stages
+Content-Type: application/json
+
+{ "name": "Project Experience", "order": 2 }
+
+
+### 5. Add questions  → @questionVersionId (first question of stage 1)
+POST {{base}}/api/stages/{{stage1Id}}/questions
+Content-Type: application/json
+
+{ "question": "Explain SQL vs NoSQL databases.", "type": "MULTI_LINE", "order": 1 }
+
+### 5b. Second question
+POST {{base}}/api/stages/{{stage1Id}}/questions
+Content-Type: application/json
+
+{ "question": "How would you design a rate limiter?", "type": "MULTI_LINE", "order": 2 }
+
+
+### 6. Add rubric criteria
+POST {{base}}/api/stages/{{stage1Id}}/questions/{{questionVersionId}}/rubrics
+Content-Type: application/json
+
+{ "name": "Database fundamentals", "description": "SQL vs NoSQL trade-offs", "maxScore": 5 }
+
+### 6b. Second criterion
+POST {{base}}/api/stages/{{stage1Id}}/questions/{{questionVersionId}}/rubrics
+Content-Type: application/json
+
+{ "name": "Clarity", "maxScore": 3 }
+
+
+### 7. Publish pipeline
+# NOTE: there is no standalone publish-pipeline endpoint. The immutable snapshot
+# (PipelineVersion → PipelineStageVersion → QuestionVersion → options/rubrics)
+# is minted by step 9, when the job posting is published. Nothing after that
+# point can mutate the snapshot an interview is running against.
+
+
+### 8. Create job posting  → @jobPostingId   (status DRAFT)
+POST {{base}}/api/job-postings
+Content-Type: application/json
+
+{ "title": "Backend Developer", "description": "Smoke job", "pipelineId": "{{pipelineId}}" }
+
+
+### 9. Publish job  (mints the pipeline snapshot; sets jobPosting.pipelineVersionId)
+POST {{base}}/api/job-postings/{{jobPostingId}}/publish
+
+### 9b. Publishing twice must conflict (snapshot already frozen) — expect 400/409
+POST {{base}}/api/job-postings/{{jobPostingId}}/publish
+
+
+### 10/11/12. Invite candidate → creates candidate + application + invite token
+POST {{base}}/api/applications/invite
+Content-Type: application/json
+
+{ "firstName": "Ada", "lastName": "Lovelace", "email": "ada+{{$timestamp}}@intervue.test", "jobPostingId": "{{jobPostingId}}" }
+
+
+### 13. Create interview  → @interviewId
+POST {{base}}/api/interviews
+Content-Type: application/json
+
+{ "applicationId": "{{applicationId}}" }
+
+
+### 14. Access interview by invite token (candidate-facing, no account)
+GET {{base}}/api/interviews/access/{{inviteToken}}
+
+
+### 15. Start interview
+POST {{base}}/api/interviews/{{interviewId}}/start
+
+
+### 16. Submit answer against the current question  → @answerId
+POST {{base}}/api/interviews/{{interviewId}}/answers
+Content-Type: application/json
+
+{
+  "questionId": "{{questionVersionId}}",
+  "content": "SQL databases are relational and provide ACID guarantees with complex joins, while NoSQL trades some guarantees for horizontal scale and flexible schemas."
+}
+
+
+### 17/18. Progress questions, then stages
+GET {{base}}/api/interviews/{{interviewId}}/current
+# Repeat step 16 with the returned next question. When the last question of a
+# stage is answered, the backend completes the stage and moves to the next one
+# inside the SAME transaction — no separate advance call exists, by design.
+
+
+### 19. Complete interview (idempotent — safe to call again)
+POST {{base}}/api/internal/interviews/{{interviewId}}/complete
+Authorization: Internal {{internalToken}}
+
+
+### 20. Trigger AI evaluation — one row per model
+POST {{base}}/api/internal/evaluations
+Authorization: Internal {{internalToken}}
+Content-Type: application/json
+
+{ "interviewSessionId": "{{interviewId}}", "answerId": "{{answerId}}", "model": "openai/gpt-4o-mini" }
+
+
+### 20b. Complete that evaluation
+PATCH {{base}}/api/internal/evaluations/{{evaluationId}}/complete
+Authorization: Internal {{internalToken}}
+Content-Type: application/json
+
+{ "score": 7, "reasoning": "solid fundamentals", "result": { "criteria": [] } }
+
+
+### 21. Persist scores (upsert is idempotent on applicationId+questionVersionId)
+POST {{base}}/api/internal/scores
+Authorization: Internal {{internalToken}}
+Content-Type: application/json
+
+{
+  "applicationId": "{{applicationId}}",
+  "questionVersionId": "{{questionVersionId}}",
+  "overallScore": 7,
+  "maxScore": 8,
+  "reasoning": "smoke score",
+  "criteria": []
+}
+
+
+### 22. Generate decision (AI recommendation)  → @decisionId
+POST {{base}}/api/internal/applications/{{applicationId}}/decision
+Authorization: Internal {{internalToken}}
+Content-Type: application/json
+
+{ "outcome": "PASS", "totalScore": 7, "maxScore": 8, "reasoning": "threshold 87.5% vs 70%", "requestedBy": "ai-service" }
+
+
+### 23. Override decision (HUMAN — requires the decision:override permission)
+# Requires a signed-in user whose role holds `decision:override` (owner, admin or
+# recruiter) AND whose active organization owns this application. The previous
+# outcome is preserved in a DecisionOverride row — never overwritten (§44).
+POST {{base}}/api/interviews/{{interviewId}}/decision/override
+Content-Type: application/json
+
+{ "newOutcome": "FAIL", "reason": "Strong production experience not captured by rubric." }
+
+### 23b. Overriding to the SAME outcome must fail — expect 400
+POST {{base}}/api/interviews/{{interviewId}}/decision/override
+Content-Type: application/json
+
+{ "newOutcome": "FAIL", "reason": "no-op" }
+
+
+### 24. Verify the audit chain
+# Expect DECISION_CREATED (actorType AI) and DECISION_OVERRIDDEN (actorType USER)
+# — AI actions must stay distinguishable from human actions forever (§64 r3).
+GET {{base}}/api/internal/audit/{{orgId}}
+Authorization: Internal {{internalToken}}

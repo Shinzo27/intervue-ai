@@ -192,6 +192,19 @@ Chat uses its own `ChatProvider` contract (`src/llm/chat.ts`), separate from the
 
 ---
 
+## 6b. Human override boundary (implemented)
+
+The AI/human split is enforced on **both** sides, so "AI never overwrites a human
+decision" is not a convention but a property of the code:
+
+| Direction | Enforcement |
+|---|---|
+| AI cannot change a decision | The internal `createDecision` endpoint rejects a second decision for the same application; there is no internal override endpoint at all. The Action MCP also refuses to request `decision:override`, which `permissions.ts` lists in `FORBIDDEN_CAPABILITIES`. |
+| Only an authorized human can change one | `POST /interviews/:id/decision/override` requires the `decision:override` permission (owner, admin, recruiter — §44's "Recruiter/Admin"). An interviewer may score an interview but may not change a hiring outcome. |
+| History is never silently lost | Each override writes a `DecisionOverride` row holding `previousOutcome`, `newOutcome`, `reason` and the acting user, then updates the decision. |
+| Overrides are attributable | The audit event is written with `actorType: USER`, distinguishable forever from the `AI` events written by recommendation flows. |
+| Tenant boundary | The service refuses an override whose application belongs to another organization, reported as 404 so the endpoint never confirms another tenant's interview exists. |
+
 ## 7. Safety rules (non-negotiable)
 
 1. AI never bypasses organization boundaries.

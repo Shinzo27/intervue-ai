@@ -284,6 +284,101 @@ icall("Internal: Create Decision (duplicate must fail)", "POST",
       body={"outcome": "FAIL", "totalScore": 1, "maxScore": 8, "requestedBy": "collection-runner"},
       expect=(400,))
 
+# ------------------ 22-24: human override + audit (master-note §44, §66 23-24)
+
+# The override endpoint resolves the decision through the interview, so C needs
+# an interview session of its own.
+iv3 = data_of(call("Create Interview C", "POST", "/api/interviews",
+                   body={"applicationId": application_id3}))
+interview_id3 = require_id(iv3.get("id"), "interviewIdC")
+print(f"     interviewIdC = {interview_id3} (hosts the override test)")
+
+ovr = data_of(call("Override Decision (human)", "POST",
+                   f"/api/interviews/{interview_id3}/decision/override",
+                   body={"newOutcome": "FAIL",
+                         "reason": "Strong production experience not captured by rubric."}))
+print(f"     override: previousOutcome={ovr.get('override', {}).get('previousOutcome')} "
+      f"newOutcome={ovr.get('override', {}).get('newOutcome')}")
+
+audit_after = icall("Internal: List Audit (post-override)", "GET", f"/audit/{org_id}")
+override_events = [e for e in (audit_after if isinstance(audit_after, list) else [])
+                   if e.get("action") == "DECISION_OVERRIDDEN"]
+if override_events:
+    ev = override_events[0]
+    print(f"     audit: actorType={ev.get('actorType')} actorId={str(ev.get('actorId'))[:12]}...")
+else:
+    print("     FAIL no DECISION_OVERRIDDEN audit event was recorded")
+
+call("Override Decision (same outcome must fail)", "POST",
+     f"/api/interviews/{interview_id3}/decision/override",
+     body={"newOutcome": "FAIL", "reason": "again"}, expect=(400,))
+
+anon = urllib.request.build_opener()
+anon_req = urllib.request.Request(
+    f"{BASE}/api/interviews/{interview_id3}/decision/override",
+    data=json.dumps({"newOutcome": "PASS", "reason": "anonymous"}).encode(),
+    method="POST",
+    headers={"Content-Type": "application/json"},
+)
+try:
+    with anon.open(anon_req, timeout=30) as resp:
+        anon_status = resp.status
+except urllib.error.HTTPError as e:
+    anon_status = e.code
+except Exception:
+    anon_status = 0
+anon_ok = anon_status in (401, 403)
+print(f"{'PASS' if anon_ok else 'FAIL'} {anon_status} POST   Override Decision (anonymous must be denied)")
+results.append(("Override Decision (anonymous must be denied)", "POST",
+                "/decision/override", anon_status, anon_ok))
+
+# --- negative: a DIFFERENT tenant must not be able to override org 1's decision.
+# This is the check the permission guard + org scoping actually add: a signed-in
+# user of another organization is a valid session, but not a valid actor here.
+cross_jar = http.cookiejar.CookieJar()
+cross_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cross_jar))
+cross_email = f"outsider-{RUN_TAG}@intervue.test"
+
+def cross_call(name, method, path, body=None, expect=(200, 201)):
+    req = urllib.request.Request(
+        f"{BASE}{path}",
+        data=json.dumps(body).encode() if body is not None else None,
+        method=method,
+    )
+    req.add_header("Content-Type", "application/json")
+    if path.startswith("/api/auth"):
+        req.add_header("Origin", "http://localhost:3001")
+    try:
+        with cross_opener.open(req, timeout=60) as resp:
+            st, payload = resp.status, json.loads(resp.read().decode() or "{}")
+    except urllib.error.HTTPError as e:
+        st = e.code
+        try:
+            payload = json.loads(e.read().decode() or "{}")
+        except Exception:
+            payload = {}
+    ok = st in expect
+    print(f"{'PASS' if ok else 'FAIL'} {st} {method:6} {name}")
+    results.append((name, method, path, st, ok))
+    return payload
+
+cross_call("Outsider sign up", "POST", "/api/auth/sign-up/email",
+           body={"email": cross_email, "password": "OutsiderSecure!2026", "name": "Outsider"},
+           expect=(200, 201))
+cross_call("Outsider sign in", "POST", "/api/auth/sign-in/email",
+           body={"email": cross_email, "password": "OutsiderSecure!2026"}, expect=(200,))
+outsider_org = data_of(cross_call("Outsider creates own org", "POST",
+                                  "/api/auth/organization/create",
+                                  body={"name": "Outsider Org",
+                                        "slug": f"outsider-org-{RUN_TAG}"}))
+cross_call("Outsider activates own org", "POST", "/api/auth/organization/set-active",
+           body={"organizationId": outsider_org.get("id")}, expect=(200, 201))
+
+# The outsider knows interview_id3 but it belongs to org 1 -> must be 404.
+cross_call("Outsider override is denied (cross-org)", "POST",
+           f"/api/interviews/{interview_id3}/decision/override",
+           body={"newOutcome": "PASS", "reason": "not my decision"}, expect=(404, 403))
+
 # ------------------------------------------------------------------- report
 
 passed = sum(1 for r in results if r[4])

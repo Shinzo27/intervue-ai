@@ -18,4 +18,15 @@ export enum Permission {
   CANDIDATE_VIEW = 'candidate:view',
 
   INTERVIEW_EVALUATE = 'interview:evaluate',
+
+  /**
+   * Replace a persisted hiring decision with a different outcome.
+   *
+   * Deliberately distinct from INTERVIEW_EVALUATE: scoring an interview and
+   * overriding a hiring decision are different levels of authority, and
+   * master-note §44 gives the override to "Recruiter/Admin". Holding
+   * `decision:override` is what makes a human override legitimate — the AI
+   * actor can never hold it (see ai-service action/permissions.ts).
+   */
+  DECISION_OVERRIDE = 'decision:override',
 }

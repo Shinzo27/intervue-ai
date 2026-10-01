@@ -818,7 +818,11 @@ export class InterviewsService {
     return conversation;
   }
 
-  async createDecision(interviewId: string, dto: CreateDecisionDto) {
+  async createDecision(
+    interviewId: string,
+    dto: CreateDecisionDto,
+    organizationId?: string,
+  ) {
     const interview = await this.prisma.interviewSession.findUnique({
       where: {
         id: interviewId,
@@ -829,6 +833,16 @@ export class InterviewsService {
     });
 
     if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    // Tenant boundary: callers act only inside their active organization.
+    // Absent an explicit org (internal service-to-service calls) the check is
+    // skipped, so this cannot break the AI capability layer.
+    if (
+      organizationId &&
+      interview.application.organizationId !== organizationId
+    ) {
       throw new NotFoundException('Interview session not found');
     }
 
@@ -876,6 +890,7 @@ export class InterviewsService {
     interviewId: string,
     userId: string,
     dto: OverrideDecisionDto,
+    organizationId?: string,
   ) {
     const interview = await this.prisma.interviewSession.findUnique({
       where: {
@@ -887,6 +902,16 @@ export class InterviewsService {
     });
 
     if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    // Tenant boundary (§44/§64): a recruiter may only override decisions that
+    // belong to their own organization. Reported as 404 rather than 403 so the
+    // endpoint does not confirm the existence of another tenant's interview.
+    if (
+      organizationId &&
+      interview.application.organizationId !== organizationId
+    ) {
       throw new NotFoundException('Interview session not found');
     }
 

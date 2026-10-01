@@ -20,6 +20,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.CANDIDATE_VIEW,
 
     Permission.INTERVIEW_EVALUATE,
+
+    Permission.DECISION_OVERRIDE,
   ],
 
   [Role.ADMIN]: [
@@ -39,6 +41,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.CANDIDATE_VIEW,
 
     Permission.INTERVIEW_EVALUATE,
+
+    Permission.DECISION_OVERRIDE,
   ],
 
   [Role.RECRUITER]: [
@@ -52,6 +56,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.PIPELINE_VIEW,
 
     Permission.CANDIDATE_VIEW,
+
+    // §44: recruiters/admins own the hiring decision, so they may override it.
+    Permission.DECISION_OVERRIDE,
   ],
 
   [Role.INTERVIEWER]: [
