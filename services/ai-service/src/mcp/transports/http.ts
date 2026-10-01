@@ -1,5 +1,5 @@
 import type { Server } from 'node:http';
-import express from 'express';
+import express, { type Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -15,6 +15,7 @@ import type { Env } from '../../config/env.js';
 export function startHttpTransport(
   server: McpServer,
   env: Env,
+  interviewRouter?: Router,
 ): Promise<Server> {
   const app = express();
 
@@ -24,6 +25,13 @@ export function startHttpTransport(
   app.get('/health', (_req, res) => {
     res.json({ ok: true, service: 'intervue-ai-mcp', transport: 'http' });
   });
+
+  // Candidate-facing interviewer routes mount BEFORE the MCP bearer guard:
+  // the portal is a different client and is not a tool caller. Phase 9 puts
+  // candidate-token verification in front of these routes.
+  if (interviewRouter) {
+    app.use(interviewRouter);
+  }
 
   // Bearer auth (skip when no token configured — dev only).
   app.use((req, res, next) => {

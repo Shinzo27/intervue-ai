@@ -427,6 +427,39 @@ export class InternalService {
    * Conversation transcript (agent context). One Conversation row per
    * interview session; messages ordered by createdAt.
    */
+  /**
+   * Ensure a Conversation row exists for the interview (idempotent).
+   *
+   * `appendMessage` requires a conversation and 404s without one, so the
+   * conversational agent needs this to bootstrap the transcript. Returns the
+   * existing row when already present — safe to call on every turn.
+   */
+  async ensureConversation(interviewId: string) {
+    if (!UUID_RE.test(interviewId)) {
+      throw new BadRequestException('interviewId must be a UUID');
+    }
+
+    const interview = await this.prisma.interviewSession.findUnique({
+      where: { id: interviewId },
+      select: { id: true },
+    });
+    if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    const existing = await this.prisma.conversation.findUnique({
+      where: { interviewSessionId: interviewId },
+    });
+    if (existing) {
+      return { conversationId: existing.id, created: false };
+    }
+
+    const conversation = await this.prisma.conversation.create({
+      data: { interviewSessionId: interviewId },
+    });
+    return { conversationId: conversation.id, created: true };
+  }
+
   async getTranscript(interviewId: string) {
     if (!UUID_RE.test(interviewId)) {
       throw new BadRequestException('interviewId must be a UUID');

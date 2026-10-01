@@ -92,6 +92,13 @@ export class InternalController {
 
   // ------------------------------------------------------------- messaging
 
+  /** Idempotent bootstrap for the conversational agent's transcript. */
+  @Post('interviews/:id/conversation')
+  @ApiResponseFormat()
+  async ensureConversation(@Param('id') id: string) {
+    return this.internalService.ensureConversation(id);
+  }
+
   @Post('interviews/:id/messages')
   @ApiResponseFormat()
   async appendMessage(

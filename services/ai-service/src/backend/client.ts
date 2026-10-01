@@ -207,6 +207,34 @@ export class BackendClient {
     );
   }
 
+  /** Idempotent transcript bootstrap (the agent calls this each turn). */
+  ensureConversation(
+    interviewId: string,
+    traceId?: string,
+  ) {
+    return this.request<{ conversationId: string; created: boolean }>(
+      'POST',
+      `/interviews/${encodeURIComponent(interviewId)}/conversation`,
+      { traceId },
+    );
+  }
+
+  submitAnswer(
+    interviewId: string,
+    dto: { questionId: string; content: string },
+    traceId?: string,
+  ) {
+    return this.request<{
+      answer: { id: string };
+      nextQuestion: { id: string; question: string; options?: unknown[] } | null;
+      stageCompleted: boolean;
+      interviewCompleted: boolean;
+    }>('POST', `/interviews/${encodeURIComponent(interviewId)}/answers`, {
+      body: dto,
+      traceId,
+    });
+  }
+
   appendMessage(
     interviewId: string,
     dto: {

@@ -88,6 +88,9 @@ Phase tags refer to the completion plan. ✅ = implemented.
 
 ### Backend internal capability surface (Phase 1 — implemented)
 
+> Phase 5 added `POST /internal/interviews/:id/conversation` — an idempotent
+> transcript bootstrap, without which `appendMessage` 404s and no conversation can start.
+
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/internal/interviews/:id/state` | Full agent-facing state (stage, question + options + rubric, progress, candidate/job summary) |
@@ -165,13 +168,27 @@ Answer ──► Model A (OpenAI, primary)   ──► Evaluation A ─┐
 
 ---
 
-## 6. Conversational interviewer
+## 6. Conversational interviewer (implemented)
 
-- OpenAI tool-calling loop bound to the MCP tools; system prompt = persona + current state fetched via Pipeline MCP.
-- **The pipeline snapshot is the source of truth** — the agent never invents questions, stages, or rubrics.
-- Candidate message → `Message(CANDIDATE)` + `Answer(TRANSCRIPT)` → evaluation (async, does not block the next question) → advance → `Message(ASSISTANT)` with the next question.
-- SSE streaming endpoint serves the candidate portal.
-- **Deterministic fallback:** if the LLM is unavailable or errors, the service asks the current question verbatim, stores the answer, and queues evaluation for retry. The interview must never dead-end because of an AI outage.
+Turn flow (`src/ai/interviewer/agent.ts`):
+
+```text
+candidate message
+  → Message(CANDIDATE)            (idempotent conversation bootstrap first)
+  → Answer(TRANSCRIPT) via POST /internal/interviews/:id/answers
+       └─ backend advances question/stage/interview pointers transactionally
+  → re-read state, build prompt from the snapshot
+  → Message(ASSISTANT) with the NEXT question, verbatim
+  → scoring runs after the reply — never blocks the next question
+```
+
+- **The pipeline snapshot is the source of truth.** The prompt embeds the current question inside a `<question>` fence and forbids inventing, splitting or rewording it; when there is no current question the agent wraps up instead of asking anything.
+- The agent never moves a pointer itself — the backend owns progression.
+- Candidate-facing routes: `POST /interviews/:id/chat` and `POST /interviews/:id/chat/stream` (SSE frames `start` → `delta`* → `done`), mounted **before** the MCP bearer guard because the portal is not a tool caller. Phase 9 puts candidate-token verification in front of them.
+- **Deterministic fallback:** on LLM failure or empty output the agent asks the snapshot question verbatim and marks the turn `mode: 'fallback'`; the answer is already stored, so scoring can be retried. The interview never dead-ends because of an AI outage.
+- A late message on a completed interview is recorded with `scored: false` and never attached to a question, so an afterthought stays visible to the recruiter without polluting scoring state.
+
+Chat uses its own `ChatProvider` contract (`src/llm/chat.ts`), separate from the scoring `LlmProvider`: chat needs multi-turn history and a token cap, which the single-shot structured-output `evaluate()` shape cannot express. `fake` implements the same contract and relays the fenced question, so the offline e2e run exercises the real constraint instead of a stub.
 
 ---
 
