@@ -227,9 +227,49 @@ decision" is not a convention but a property of the code:
 
 ---
 
-## 9. Offline evals
+## 9. Offline evals (implemented)
 
-`services/ai-service/evals/` — golden answer set with expected score bands; `pnpm eval` runs the scoring pipeline offline and reports inter-model agreement %, MAE vs bands, and per-criterion calibration. Results are recorded here once Phase 7 lands.
+`services/ai-service/evals/` runs the scoring pipeline offline — no backend, no MCP — over
+a golden answer set. `pnpm eval`.
+
+| File | Purpose |
+|---|---|
+| `fixtures.json` | 36 golden cases across 5 expected-quality levels (excellent → poor), spanning 4 questions and 10 rubric criteria |
+| `run.ts` | Loads fixtures, runs every configured provider, writes `report.json` + `report.md` |
+| `metrics.ts` | The metric maths, unit-tested (`evals/__tests__/metrics.test.ts`) |
+
+Metrics reported:
+
+- **MAE** vs the expected band midpoint (percentage points)
+- **In-band rate** — how often the score landed inside the expected band
+- **Inter-model agreement** — % of cases within the 20pp disagreement threshold, plus mean gap
+- **By-level means** — a healthy evaluator is *monotonic*: excellent answers must outscore poor ones
+- **Per-criterion separation** — mean awarded % on high-band cases minus low-band cases. A criterion near 0pp is not discriminating between a strong answer and a weak one, which is a rubric defect the aggregate score hides.
+
+### Baseline numbers: not yet recorded — deliberately
+
+The repository ships with **no usable LLM key** (`OPENAI_API_KEY`/`GROQ_API_KEY` are
+placeholders), so the only runnable provider is the deterministic `fake` one. That
+provider scores by hashing the answer text, so its metrics measure the hash function,
+not model judgement. A smoke run produces a non-monotonic result — currently "poor"
+answers average 67% and "excellent" 71% — which is exactly what the harness is designed
+to expose rather than publish.
+
+The harness therefore treats a fake-provider run as a **smoke run**: it marks the report
+`meaningful: false`, prints a warning, refuses to call the numbers quotable, and writes
+its artifacts to a gitignored path so a smoke report cannot be mistaken for results.
+
+To produce the quotable baseline:
+
+```bash
+# free tier, and gives genuine two-model diversity
+LLM_PROVIDER=groq GROQ_API_KEY=... \
+LLM_SECONDARY_PROVIDER=openai OPENAI_API_KEY=... \
+pnpm --filter ai-service eval
+```
+
+Then record the reported MAE, in-band rate, agreement % and the weakest per-criterion
+separations here.
 
 ---
 

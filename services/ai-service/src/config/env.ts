@@ -5,18 +5,15 @@ import { z } from 'zod';
  * half-configured surface: missing backend token or URL means every MCP
  * tool would fail at call time instead of loudly at startup.
  */
-const envSchema = z.object({
-  BACKEND_INTERNAL_URL: z.string().url(),
-  BACKEND_INTERNAL_TOKEN: z.string().min(1),
 
-  MCP_HTTP_HOST: z.string().default('127.0.0.1'),
-  MCP_HTTP_PORT: z.coerce.number().int().positive().default(3100),
-
-  // Optional bearer token protecting the HTTP transport. When unset the
-  // transport binds without auth (dev without auth) and logs a warning.
-  MCP_HTTP_TOKEN: z.string().min(1).optional(),
-
-  // --- LLM providers -----------------------------------------------------
+/**
+ * LLM provider configuration, factored out from the backend/MCP settings.
+ *
+ * The offline eval harness (evals/run.ts) needs ONLY these fields and never
+ * talks to the backend, so it can load them without being forced to supply a
+ * backend URL it would not use.
+ */
+export const llmEnvSchema = z.object({
   // LLM_PROVIDER selects the active adapter: fake | openai | groq.
   LLM_PROVIDER: z.enum(['fake', 'openai', 'groq']).default('fake'),
   OPENAI_API_KEY: z.string().min(1).optional(),
@@ -28,28 +25,31 @@ const envSchema = z.object({
   // its key to be present when enabled.
   LLM_SECONDARY_PROVIDER: z.enum(['none', 'openai', 'groq']).default('none'),
   LLM_SECONDARY_MODEL: z.string().optional(),
+});
+
+export type LlmEnv = z.infer<typeof llmEnvSchema>;
+
+const envSchema = llmEnvSchema.extend({
+  BACKEND_INTERNAL_URL: z.string().url(),
+  BACKEND_INTERNAL_TOKEN: z.string().min(1),
+
+  MCP_HTTP_HOST: z.string().default('127.0.0.1'),
+  MCP_HTTP_PORT: z.coerce.number().int().positive().default(3100),
+
+  // Optional bearer token protecting the HTTP transport. When unset the
+  // transport binds without auth (dev without auth) and logs a warning.
+  MCP_HTTP_TOKEN: z.string().min(1).optional(),
 
   NODE_ENV: z.string().default('development'),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
-export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const parsed = envSchema.safeParse(source);
-
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
-      .join('\n');
-    throw new Error(
-      `Invalid ai-service environment:\n${issues}\n` +
-        `Copy services/ai-service/.env.example to .env and fill it in.`,
-    );
-  }
-
-  const env = parsed.data;
-
-  // Provider-key cross-checks
+/**
+ * Provider-key cross-checks, shared by both loaders so the full service and the
+ * offline harness can never disagree about what a valid provider config is.
+ */
+function assertProviderConfig(env: LlmEnv): void {
   if (env.LLM_PROVIDER === 'openai' && !env.OPENAI_API_KEY) {
     throw new Error('LLM_PROVIDER=openai requires OPENAI_API_KEY');
   }
@@ -72,6 +72,62 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
       );
     }
   }
+}
+
+/**
+ * LLM-only configuration for offline tools (the eval harness). Never throws on
+ * missing backend settings, because those are genuinely not needed.
+ *
+ * A placeholder key is treated as absent: the shipped .env contains
+ * `OPENAI_API_KEY=sk-...` style placeholders, and treating "sk-..." as a real
+ * credential would produce confusing provider errors at call time instead of a
+ * clear "no key configured" at boot.
+ */
+export function loadLlmEnv(source: NodeJS.ProcessEnv = process.env): LlmEnv {
+  const cleaned: NodeJS.ProcessEnv = { ...source };
+  for (const key of ['OPENAI_API_KEY', 'GROQ_API_KEY'] as const) {
+    const value = cleaned[key];
+    if (value && !isUsableKey(value)) {
+      delete cleaned[key];
+    }
+  }
+
+  const parsed = llmEnvSchema.safeParse(cleaned);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
+    throw new Error(`Invalid LLM environment:\n${issues}`);
+  }
+
+  assertProviderConfig(parsed.data);
+  return parsed.data;
+}
+
+/** Reject obvious placeholders so "no key" is reported as such, not as a 401. */
+function isUsableKey(value: string): boolean {
+  const v = value.trim();
+  if (v.length < 20) return false;
+  if (/^<.*>$/.test(v)) return false;
+  if (/your[-_ ]?key|placeholder|changeme|xxx|\.\.\./i.test(v)) return false;
+  return true;
+}
+
+export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
+  const parsed = envSchema.safeParse(source);
+
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
+    throw new Error(
+      `Invalid ai-service environment:\n${issues}\n` +
+        `Copy services/ai-service/.env.example to .env and fill it in.`,
+    );
+  }
+
+  const env = parsed.data;
+  assertProviderConfig(env);
 
   return env;
 }

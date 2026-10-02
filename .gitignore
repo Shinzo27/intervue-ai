@@ -36,3 +36,9 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Offline eval run artifacts (regenerate with `pnpm --filter ai-service eval`).
+# Deliberately not committed: a report produced by the deterministic `fake`
+# provider is a smoke run, and a committed one would read like real results.
+services/ai-service/evals/report.json
+services/ai-service/evals/report.md

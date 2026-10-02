@@ -1,11 +1,11 @@
-import type { Env } from '../config/env.js';
+import type { LlmEnv } from '../config/env.js';
 import type { LlmProvider } from './provider.js';
 import { createFakeProvider } from './provider.js';
 import { createOpenAiProvider } from './openai-provider.js';
 import { createGroqProvider } from './groq-provider.js';
 
 /** Primary provider from env (fake | openai | groq). */
-export function buildPrimaryProvider(env: Env): LlmProvider {
+export function buildPrimaryProvider(env: LlmEnv): LlmProvider {
   switch (env.LLM_PROVIDER) {
     case 'openai':
       return createOpenAiProvider(env.OPENAI_API_KEY as string, env.OPENAI_MODEL);
@@ -17,7 +17,7 @@ export function buildPrimaryProvider(env: Env): LlmProvider {
 }
 
 /** Secondary provider for two-model scoring, or null when disabled. */
-export function buildSecondaryProvider(env: Env): LlmProvider | null {
+export function buildSecondaryProvider(env: LlmEnv): LlmProvider | null {
   switch (env.LLM_SECONDARY_PROVIDER) {
     case 'openai':
       return createOpenAiProvider(

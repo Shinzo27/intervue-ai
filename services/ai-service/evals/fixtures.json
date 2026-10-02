@@ -1,0 +1,1202 @@
+{
+  "$comment": "Golden set for the offline scoring eval (master-note \u00a77). Each case is (question, rubric, answer, expected score band). Bands are percentages of the rubric maximum and overlap on purpose: evaluator judgment varies, and bands that excluded all reasonable scores would make MAE meaningless.",
+  "version": 1,
+  "cases": [
+    {
+      "id": "q1-01",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL databases are relational: data is stored in tables with a fixed schema, and the engine gives you ACID transactions, foreign keys and joins. NoSQL is an umbrella for non-relational stores, which each trade something different \u2014 document stores like Mongo drop joins for flexible schemas, key-value stores like Redis prioritise latency, and wide-column stores like Cassandra trade strong consistency for horizontal write scaling. I pick SQL when the data is relational and correctness matters, and NoSQL when access patterns are known and I need to scale writes across regions.",
+      "expectedLevel": "excellent",
+      "expectedBandPct": [
+        85,
+        100
+      ]
+    },
+    {
+      "id": "q1-02",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "The core distinction is the data model and the guarantees you get. Relational engines normalise into tables and enforce integrity through constraints and transactions, so you get strong consistency and expressive queries. Non-relational stores denormalise for a known access pattern, giving up joins and often some consistency to gain horizontal scale and schema flexibility. In practice it is a trade of query flexibility and correctness guarantees against scalability and write throughput.",
+      "expectedLevel": "excellent",
+      "expectedBandPct": [
+        85,
+        100
+      ]
+    },
+    {
+      "id": "q1-03",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL is relational with tables and a fixed schema, and it supports joins and transactions. NoSQL is more flexible \u2014 it covers document, key-value and column stores, and it scales horizontally more easily. SQL is better when you need consistency and complex queries; NoSQL is better when you need to handle a lot of data quickly with a flexible schema.",
+      "expectedLevel": "strong",
+      "expectedBandPct": [
+        70,
+        92
+      ]
+    },
+    {
+      "id": "q1-04",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL databases use structured tables and SQL for querying, with ACID guarantees. NoSQL databases are schema-flexible and come in several flavours, and they are usually chosen for scale. The main trade-off is consistency and query power versus flexibility and horizontal scalability.",
+      "expectedLevel": "strong",
+      "expectedBandPct": [
+        70,
+        92
+      ]
+    },
+    {
+      "id": "q1-05",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL is for relational data and NoSQL is for non-relational data. SQL uses tables and NoSQL uses documents or key-value pairs. You would choose NoSQL when you need to scale, and SQL when your data is structured.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q1-06",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "They are two different kinds of database. SQL is the traditional one with tables and columns, and NoSQL is newer and stores things more freely. NoSQL scales better and SQL is more reliable.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q1-07",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL is the older one and NoSQL is the newer one. NoSQL is faster for big data. Most companies use both depending on the project.",
+      "expectedLevel": "weak",
+      "expectedBandPct": [
+        25,
+        55
+      ]
+    },
+    {
+      "id": "q1-08",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL has tables and NoSQL does not have tables. NoSQL is used by companies like Facebook because it is faster.",
+      "expectedLevel": "weak",
+      "expectedBandPct": [
+        25,
+        55
+      ]
+    },
+    {
+      "id": "q1-09",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "They are both databases. I have used MySQL before and it was fine for my projects.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    },
+    {
+      "id": "q1-10",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL is a language and NoSQL is not a language. That is the main difference.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    },
+    {
+      "id": "q1-11",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I am not sure about the details, but I think NoSQL is better for modern applications. I would need to look it up.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    },
+    {
+      "id": "q1-12",
+      "questionId": "q1",
+      "question": "Explain the difference between SQL and NoSQL databases.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q1.fundamentals",
+          "name": "Database fundamentals",
+          "description": "Correct characterisation of relational vs non-relational trade-offs",
+          "maxScore": 5
+        },
+        {
+          "id": "q1.clarity",
+          "name": "Clarity",
+          "description": "Explains the distinction understandably",
+          "maxScore": 3
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "SQL stores data in tables and is queried with structured queries; NoSQL stores data in documents or key-value form. The choice depends on whether the data is relational and how much you need to scale. I have mostly used PostgreSQL so I am more familiar with the SQL side.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q2-01",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I would use a token bucket per API key because it allows short bursts while enforcing a sustained rate. State lives in Redis with an atomic Lua script so the read-decrement-write is not racy across nodes, and the bucket refills based on elapsed time rather than a timer. For multi-region I would either shard buckets by key so one region owns a key, or accept approximate global limits with short TTL windows to avoid cross-region latency on every request. Failures return 429 with Retry-After and rate-limit headers.",
+      "expectedLevel": "excellent",
+      "expectedBandPct": [
+        85,
+        100
+      ]
+    },
+    {
+      "id": "q2-02",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "Sliding-window counter in Redis: it smooths the boundary spike you get from a fixed window, at the cost of storing two counters. The check must be atomic \u2014 I use a Lua script or GETSET-style decrement so concurrent requests cannot both pass. For distributed correctness, the counter is keyed per API key and per window, and I would rather be slightly conservative at window edges than allow bursts through. Over-limit requests get 429 plus Retry-After.",
+      "expectedLevel": "excellent",
+      "expectedBandPct": [
+        85,
+        100
+      ]
+    },
+    {
+      "id": "q2-03",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "Token bucket is a good default \u2014 it allows bursts and enforces an average rate. I would keep the bucket state in Redis so all instances share it, and use an atomic operation so two requests cannot both decrement past zero. Rejected requests return 429. If Redis were unavailable I would fail open or closed depending on how much the endpoint matters.",
+      "expectedLevel": "strong",
+      "expectedBandPct": [
+        70,
+        92
+      ]
+    },
+    {
+      "id": "q2-04",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I would use a fixed window counter in Redis, incrementing a key per client per minute and rejecting once it exceeds the limit. It is simple and cheap. The downside is a burst at a window boundary, so a sliding window or token bucket is better if that matters. The counter update needs to be atomic.",
+      "expectedLevel": "strong",
+      "expectedBandPct": [
+        70,
+        92
+      ]
+    },
+    {
+      "id": "q2-05",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I would store a counter per user in Redis and increment it on each request. If the counter goes over the limit, return 429. The counter expires after a minute so it resets.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q2-06",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "Use a counter in Redis with an expiry, and check it on every request. If it is too high, block the request. This works across multiple servers because Redis is shared.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q2-07",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I would keep a count of requests and if it is too many then return an error to the user. You could store it in the database.",
+      "expectedLevel": "weak",
+      "expectedBandPct": [
+        25,
+        55
+      ]
+    },
+    {
+      "id": "q2-08",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I would use Redis to count the requests and limit them. There are libraries that do this so I would probably use one.",
+      "expectedLevel": "weak",
+      "expectedBandPct": [
+        25,
+        55
+      ]
+    },
+    {
+      "id": "q2-09",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I would add a limit to the API so that it does not get too many requests.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    },
+    {
+      "id": "q2-10",
+      "questionId": "q2",
+      "question": "How would you design a rate limiter for a public API?",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q2.algorithm",
+          "name": "Algorithm correctness",
+          "description": "Chooses and explains a sound limiting algorithm",
+          "maxScore": 5
+        },
+        {
+          "id": "q2.distributed",
+          "name": "Distributed scalability",
+          "description": "Addresses multi-node coordination and state",
+          "maxScore": 3
+        },
+        {
+          "id": "q2.communication",
+          "name": "Communication",
+          "description": "Structured, concise explanation",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "Use a queue to handle the requests so they do not overload the server.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    },
+    {
+      "id": "q3-01",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I owned the migration of our order pipeline from a single Postgres instance to a partitioned setup. Writes were hitting 4k/s and p99 latency had gone from 80ms to over 900ms under Black Friday load. I measured first and found the hot path was a contention point on one index, so I partitioned by tenant and moved the outbox workers to idempotent consumers over a queue. That took p99 to 110ms at 6k/s. The trade-off I accepted was operational complexity: rebalancing partitions is now a scheduled job rather than automatic.",
+      "expectedLevel": "excellent",
+      "expectedBandPct": [
+        85,
+        100
+      ]
+    },
+    {
+      "id": "q3-02",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "The hardest thing I shipped was an idempotency layer for a payments API. Duplicate charges were happening because client retries were not deduplicated, and the fix had to be correct under concurrency. I designed a keyed idempotency record with a unique constraint so the database itself rejected duplicates, plus a state machine so a retry in flight returned the original result rather than a conflict. I drove it from a written design doc, reviewed it with two engineers, and we went from roughly 40 duplicate-charge incidents a month to zero over the following quarter.",
+      "expectedLevel": "excellent",
+      "expectedBandPct": [
+        85,
+        100
+      ]
+    },
+    {
+      "id": "q3-03",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I led the rebuild of our notifications service. We were on a cron job that polled the database every minute and it could not keep up, so I moved it to a queue-based worker with retries and a dead-letter queue. I did the design and most of the implementation and measured the backlog drop from hours to seconds.",
+      "expectedLevel": "strong",
+      "expectedBandPct": [
+        70,
+        92
+      ]
+    },
+    {
+      "id": "q3-04",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I worked on a service that was slow because of N+1 queries. I profiled it, found the problem, and added eager loading plus a cache. Response times went from about 2 seconds to 300ms. I owned the change end to end and wrote the load test we used to verify it.",
+      "expectedLevel": "strong",
+      "expectedBandPct": [
+        70,
+        92
+      ]
+    },
+    {
+      "id": "q3-05",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I worked on a project where we had performance problems. I helped find the slow queries and we added indexes which made it faster. It was a team effort and I did the database part.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q3-06",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I built a feature for our internal dashboard that showed reports. It was challenging because there was a lot of data, so I added pagination and it worked well.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q3-07",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I worked on a big project with my team. It was challenging because there was a lot to do and the deadline was tight. We managed to finish it.",
+      "expectedLevel": "weak",
+      "expectedBandPct": [
+        25,
+        55
+      ]
+    },
+    {
+      "id": "q3-08",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "Most of my projects have been challenging in some way. I like working on hard problems and I learn a lot from them.",
+      "expectedLevel": "weak",
+      "expectedBandPct": [
+        25,
+        55
+      ]
+    },
+    {
+      "id": "q3-09",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "I do not have a specific example right now but I am a hard worker and I enjoy challenges.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    },
+    {
+      "id": "q3-10",
+      "questionId": "q3",
+      "question": "Tell us about a challenging project you worked on.",
+      "questionType": "MULTI_LINE",
+      "options": [],
+      "rubricCriteria": [
+        {
+          "id": "q3.depth",
+          "name": "Technical depth",
+          "description": "Concrete engineering detail and constraints",
+          "maxScore": 5
+        },
+        {
+          "id": "q3.ownership",
+          "name": "Ownership",
+          "description": "Personal contribution and decisions made",
+          "maxScore": 3
+        },
+        {
+          "id": "q3.comm",
+          "name": "Communication",
+          "description": "Clear narrative with measurable outcome",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "The project was difficult because I did not know the technology. I asked my senior for help and we got it done.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    },
+    {
+      "id": "q4-01",
+      "questionId": "q4",
+      "question": "Which HTTP status code indicates the client sent a malformed request?",
+      "questionType": "MCQ",
+      "options": [
+        {
+          "id": "q4.400",
+          "text": "400 Bad Request"
+        },
+        {
+          "id": "q4.401",
+          "text": "401 Unauthorized"
+        },
+        {
+          "id": "q4.403",
+          "text": "403 Forbidden"
+        },
+        {
+          "id": "q4.500",
+          "text": "500 Internal Server Error"
+        }
+      ],
+      "rubricCriteria": [
+        {
+          "id": "q4.correct",
+          "name": "Correctness",
+          "description": "Selects the correct status code",
+          "maxScore": 2
+        },
+        {
+          "id": "q4.justify",
+          "name": "Justification",
+          "description": "Explains why, and distinguishes it from neighbours",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "400 Bad Request. A malformed request \u2014 bad syntax or unparseable body \u2014 is a client-side protocol problem, so it is 4xx. It is specifically not 401 or 403: those mean the request was well-formed but the caller is unauthenticated or not permitted. 500 would be wrong because it blames the server for a fault the client caused.",
+      "expectedLevel": "excellent",
+      "expectedBandPct": [
+        85,
+        100
+      ]
+    },
+    {
+      "id": "q4-02",
+      "questionId": "q4",
+      "question": "Which HTTP status code indicates the client sent a malformed request?",
+      "questionType": "MCQ",
+      "options": [
+        {
+          "id": "q4.400",
+          "text": "400 Bad Request"
+        },
+        {
+          "id": "q4.401",
+          "text": "401 Unauthorized"
+        },
+        {
+          "id": "q4.403",
+          "text": "403 Forbidden"
+        },
+        {
+          "id": "q4.500",
+          "text": "500 Internal Server Error"
+        }
+      ],
+      "rubricCriteria": [
+        {
+          "id": "q4.correct",
+          "name": "Correctness",
+          "description": "Selects the correct status code",
+          "maxScore": 2
+        },
+        {
+          "id": "q4.justify",
+          "name": "Justification",
+          "description": "Explains why, and distinguishes it from neighbours",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "400 Bad Request. The request itself is invalid, so the server rejects it as a client error. 401 and 403 are about authentication and authorization, which are different problems.",
+      "expectedLevel": "strong",
+      "expectedBandPct": [
+        70,
+        92
+      ]
+    },
+    {
+      "id": "q4-03",
+      "questionId": "q4",
+      "question": "Which HTTP status code indicates the client sent a malformed request?",
+      "questionType": "MCQ",
+      "options": [
+        {
+          "id": "q4.400",
+          "text": "400 Bad Request"
+        },
+        {
+          "id": "q4.401",
+          "text": "401 Unauthorized"
+        },
+        {
+          "id": "q4.403",
+          "text": "403 Forbidden"
+        },
+        {
+          "id": "q4.500",
+          "text": "500 Internal Server Error"
+        }
+      ],
+      "rubricCriteria": [
+        {
+          "id": "q4.correct",
+          "name": "Correctness",
+          "description": "Selects the correct status code",
+          "maxScore": 2
+        },
+        {
+          "id": "q4.justify",
+          "name": "Justification",
+          "description": "Explains why, and distinguishes it from neighbours",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "It is 400 Bad Request. The other 4xx codes are for other errors.",
+      "expectedLevel": "adequate",
+      "expectedBandPct": [
+        50,
+        75
+      ]
+    },
+    {
+      "id": "q4-04",
+      "questionId": "q4",
+      "question": "Which HTTP status code indicates the client sent a malformed request?",
+      "questionType": "MCQ",
+      "options": [
+        {
+          "id": "q4.400",
+          "text": "400 Bad Request"
+        },
+        {
+          "id": "q4.401",
+          "text": "401 Unauthorized"
+        },
+        {
+          "id": "q4.403",
+          "text": "403 Forbidden"
+        },
+        {
+          "id": "q4.500",
+          "text": "500 Internal Server Error"
+        }
+      ],
+      "rubricCriteria": [
+        {
+          "id": "q4.correct",
+          "name": "Correctness",
+          "description": "Selects the correct status code",
+          "maxScore": 2
+        },
+        {
+          "id": "q4.justify",
+          "name": "Justification",
+          "description": "Explains why, and distinguishes it from neighbours",
+          "maxScore": 2
+        }
+      ],
+      "answerType": "TEXT",
+      "answer": "500 Internal Server Error.",
+      "expectedLevel": "poor",
+      "expectedBandPct": [
+        0,
+        35
+      ]
+    }
+  ]
+}
