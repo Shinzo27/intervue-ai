@@ -19,7 +19,10 @@ export const llmEnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   GROQ_API_KEY: z.string().min(1).optional(),
-  GROQ_MODEL: z.string().default('llama-3.1-8b-instant'),
+  // NOTE: Groq model availability is per-account. `llama-3.1-8b-instant` is NOT
+  // available on every account (it 404s as model_not_found on some); gpt-oss-120b
+  // is a current production model. Always confirm against GET /openai/v1/models.
+  GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
 
   // Two-model scoring: the secondary provider for cross-checking. Requires
   // its key to be present when enabled.
@@ -66,9 +69,21 @@ function assertProviderConfig(env: LlmEnv): void {
         `LLM_SECONDARY_PROVIDER=${env.LLM_SECONDARY_PROVIDER} requires the matching API key`,
       );
     }
-    if (env.LLM_SECONDARY_PROVIDER === env.LLM_PROVIDER) {
+    // Two models must actually differ. Same provider with a DIFFERENT model is
+    // allowed — that is genuine model diversity and is the only option when a
+    // single key is available — but the identical model twice would produce two
+    // copies of one opinion, which is worse than useless because it *looks*
+    // like agreement.
+    const primaryModel =
+      env.LLM_PROVIDER === 'openai' ? env.OPENAI_MODEL : env.GROQ_MODEL;
+    const secondaryModel =
+      env.LLM_SECONDARY_MODEL ??
+      (env.LLM_SECONDARY_PROVIDER === 'openai' ? env.OPENAI_MODEL : env.GROQ_MODEL);
+
+    if (secondaryModel === primaryModel) {
       throw new Error(
-        'Two-model scoring requires two DIFFERENT providers (e.g. primary openai, secondary groq)',
+        'Two-model scoring requires two DIFFERENT models: ' +
+          `primary and secondary both resolve to "${primaryModel}".`,
       );
     }
   }

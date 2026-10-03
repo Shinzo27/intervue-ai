@@ -36,6 +36,7 @@ import type { LlmProvider, EvaluationRequest } from '../src/llm/provider.js';
 import {
   AGREEMENT_GAP_PCT,
   computeMetrics,
+  isQuotable,
   type CaseResult,
   type ProviderCaseResult,
 } from './metrics.js';
@@ -45,8 +46,43 @@ const FIXTURES = resolve(HERE, 'fixtures.json');
 const REPORT_JSON = resolve(HERE, 'report.json');
 const REPORT_MD = resolve(HERE, 'report.md');
 
-/** Politeness limit for real API providers. */
-const CONCURRENCY = 4;
+/**
+ * Politeness limit for real API providers. Lower it when a provider caps
+ * output tokens per minute (free tiers often cap hard): concurrency above the
+ * provider's limit just converts into 429s and a shrunken sample.
+ */
+const CONCURRENCY = Number(process.env.EVAL_CONCURRENCY ?? 2);
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Providers report limits in the message body rather than Retry-After. */
+function retryDelayMs(message: string, fallback: number): number {
+  const m = /try again in ([\d.]+)s|retry[- ]?after[:\s]+([\d.]+)/i.exec(message);
+  const seconds = m ? Number(m[1] ?? m[2]) : NaN;
+  return Number.isFinite(seconds)
+    ? Math.min(90_000, seconds * 1000 + 250)
+    : Math.min(30_000, fallback);
+}
+
+const RETRYABLE = /429|rate limit|too many requests|overloaded|\b5\d\d\b|timeout|ECONNRESET|ETIMEDOUT/i;
+
+/** Call a provider with bounded exponential backoff. Returns the attempt count. */
+async function callWithRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 6,
+): Promise<{ value: T; attempts: number }> {
+  let delay = 1500;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return { value: await fn(), attempts: attempt };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!RETRYABLE.test(message) || attempt >= maxAttempts) throw error;
+      await sleep(retryDelayMs(message, delay) + Math.random() * 400);
+      delay *= 2;
+    }
+  }
+}
 
 interface MetricFixture {
   id: string;
@@ -99,7 +135,7 @@ async function runCase(f: MetricFixture, providers: LlmProvider[]): Promise<Case
   const results = await Promise.all(
     providers.map(async (p): Promise<ProviderCaseResult> => {
       try {
-        const res = await p.evaluate(request);
+        const { value: res, attempts } = await callWithRetry(() => p.evaluate(request));
         const maxScore = res.result.maxScore > 0 ? res.result.maxScore : 1;
         return {
           provider: p.name,
@@ -114,6 +150,7 @@ async function runCase(f: MetricFixture, providers: LlmProvider[]): Promise<Case
             maxScore: c.maxScore,
           })),
           usage: { totalTokens: res.usage.totalTokens },
+          attempts,
         };
       } catch (error) {
         return {
@@ -143,6 +180,7 @@ async function runCase(f: MetricFixture, providers: LlmProvider[]): Promise<Case
 function buildMarkdown(
   report: { generatedAt: string },
   metrics: ReturnType<typeof computeMetrics>,
+  quotable: boolean,
   meaningful: boolean,
 ): string {
   return [
@@ -150,9 +188,11 @@ function buildMarkdown(
     '',
     `Generated: ${report.generatedAt}`,
     '',
-    meaningful
-      ? '> Real providers configured.'
-      : '> **SMOKE RUN (fake provider).** These numbers measure the deterministic hash, not model judgement. Do not quote them.',
+    quotable
+      ? '> Real providers configured; sample complete. Quotable.'
+      : meaningful
+        ? `> **INCOMPLETE RUN — only ${metrics.scoredCases}/${metrics.cases} cases scored.** Metrics cover the survivors only and are biased. Do not quote them.`
+        : '> **SMOKE RUN (fake provider).** These numbers measure the deterministic hash, not model judgement. Do not quote them.',
     '',
     '| Metric | Value |',
     '|---|---|',
@@ -201,6 +241,15 @@ async function main() {
 
   console.log(`[eval] fixtures: ${fixtures.cases.length} cases (v${fixtures.version})`);
   console.log(`[eval] providers: ${providers.map((p) => `${p.name}:${p.model}`).join(', ')}`);
+  if (providers.length === 2) {
+    const sameProvider = providers[0].name === providers[1].name;
+    console.log(
+      sameProvider
+        ? '[eval] diversity: MODEL-level only (both models share one provider) — ' +
+            'disagreement here is not provider-level corroboration'
+        : '[eval] diversity: PROVIDER-level (two independent providers)',
+    );
+  }
   if (!meaningful) {
     console.log('');
     console.log('  !! SMOKE RUN — the `fake` provider scores by hashing the answer text.');
@@ -213,10 +262,22 @@ async function main() {
   const cases = await pool(fixtures.cases, CONCURRENCY, (f) => runCase(f, providers));
   const metrics = computeMetrics(cases, providers.length);
 
+  // Errored cases drop out of the metrics entirely, so a partial run reports
+  // whatever survived — 13 of 36 cases still yields a confident-looking MAE,
+  // just on a biased subsample. See isQuotable().
+  const verdict = isQuotable({
+    meaningful,
+    scoredCases: metrics.scoredCases,
+    cases: metrics.cases,
+  });
+  const { quotable, completeness } = verdict;
+
   const report = {
     generatedAt: new Date().toISOString(),
     meaningful,
+    quotable,
     smokeRun: !meaningful,
+    completenessPct: Number((completeness * 100).toFixed(2)),
     providers: providers.map((p) => ({ name: p.name, model: p.model })),
     fixturesVersion: fixtures.version,
     agreementGapPct: AGREEMENT_GAP_PCT,
@@ -227,7 +288,7 @@ async function main() {
 
   mkdirSync(HERE, { recursive: true });
   writeFileSync(REPORT_JSON, JSON.stringify(report, null, 2) + '\n');
-  writeFileSync(REPORT_MD, buildMarkdown(report, metrics, meaningful));
+  writeFileSync(REPORT_MD, buildMarkdown(report, metrics, quotable, meaningful));
 
   console.log('');
   console.log(`[eval] MAE vs band midpoint : ${metrics.mae} pp`);
@@ -238,8 +299,22 @@ async function main() {
       `[eval] model agreement      : ${metrics.agreement.rate}% (mean gap ${metrics.agreement.meanGapPct} pp)`,
     );
   }
+  console.log(`[eval] scored cases         : ${metrics.scoredCases}/${metrics.cases} (${(completeness * 100).toFixed(1)}%)`);
   if (metrics.providerErrorCases > 0) {
     console.log(`[eval] provider errors      : ${metrics.providerErrorCases} case(s)`);
+    const reasons = cases
+      .filter((c) => c.results.some((r) => r.error))
+      .map((c) => c.results.find((r) => r.error)?.error ?? '')
+      .slice(0, 3);
+    for (const r of reasons) console.log(`         e.g. ${r.slice(0, 140)}`);
+  }
+  if (meaningful && !quotable) {
+    console.log('');
+    console.log(`  !! INCOMPLETE RUN — only ${(completeness * 100).toFixed(1)}% of cases scored.`);
+    console.log('  !! Metrics are computed over the survivors only, so they are biased');
+    console.log('  !! and must NOT be published as a baseline. Lower EVAL_CONCURRENCY or');
+    console.log('  !! use providers with a higher rate limit.');
+    console.log('');
   }
   console.log('');
   console.log('[eval] by expected level (monotonic = a healthy evaluator):');
@@ -258,9 +333,11 @@ async function main() {
   console.log(`[eval] wrote ${REPORT_JSON}`);
   console.log(`[eval] wrote ${REPORT_MD}`);
   console.log(
-    meaningful
+    quotable
       ? '[eval] these numbers are quotable — record them in docs/ai.md §9'
-      : '[eval] NOT quotable (smoke run) — add a provider key for real metrics',
+      : meaningful
+        ? '[eval] NOT quotable — incomplete sample (see above)'
+        : '[eval] NOT quotable (smoke run) — add a provider key for real metrics',
   );
 }
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { computeMetrics, type CaseResult } from '../metrics.js';
+import { computeMetrics, isQuotable, COMPLETENESS_MIN, type CaseResult } from '../metrics.js';
 
 /**
  * The eval harness's numbers end up in a résumé and in docs, so the maths is
@@ -144,6 +144,42 @@ describe('eval metrics', () => {
     assert.deepEqual(m.byLevel.excellent, { n: 1, meanPct: 90, meanAbsError: 2.5 });
     // poor band 0-35 (mid 17.5): 10 -> 7.5, 30 -> 12.5, mean 10
     assert.deepEqual(m.byLevel.poor, { n: 2, meanPct: 20, meanAbsError: 10 });
+  });
+
+  it('refuses to publish numbers from a fake provider', () => {
+    const v = isQuotable({ meaningful: false, scoredCases: 36, cases: 36 });
+    assert.equal(v.quotable, false);
+    assert.match(v.reason ?? '', /fake provider/);
+  });
+
+  it('refuses to publish numbers from a partial run', () => {
+    // The exact failure this guard exists for: a rate-limited run scored 13 of
+    // 36 cases and the metrics still looked confident.
+    const v = isQuotable({ meaningful: true, scoredCases: 13, cases: 36 });
+    assert.equal(v.quotable, false);
+    assert.match(v.reason ?? '', /incomplete sample/);
+  });
+
+  it('publishes only a real provider with a near-complete sample', () => {
+    const v = isQuotable({ meaningful: true, scoredCases: 36, cases: 36 });
+    assert.equal(v.quotable, true);
+    assert.equal(v.completeness, 1);
+  });
+
+  it('treats the completeness threshold as exclusive at the boundary', () => {
+    const justUnder = isQuotable({ meaningful: true, scoredCases: 34, cases: 36 });
+    assert.ok(34 / 36 < COMPLETENESS_MIN);
+    assert.equal(justUnder.quotable, false);
+
+    const atThreshold = isQuotable({ meaningful: true, scoredCases: 95, cases: 100 });
+    assert.equal(atThreshold.quotable, true);
+  });
+
+  it('will not publish a fake run even at full completeness', () => {
+    assert.equal(
+      isQuotable({ meaningful: false, scoredCases: 10, cases: 10 }).quotable,
+      false,
+    );
   });
 
   it('never divides by zero on an empty run', () => {

@@ -246,30 +246,65 @@ Metrics reported:
 - **By-level means** — a healthy evaluator is *monotonic*: excellent answers must outscore poor ones
 - **Per-criterion separation** — mean awarded % on high-band cases minus low-band cases. A criterion near 0pp is not discriminating between a strong answer and a weak one, which is a rubric defect the aggregate score hides.
 
-### Baseline numbers: not yet recorded — deliberately
+### Baseline numbers (measured)
 
-The repository ships with **no usable LLM key** (`OPENAI_API_KEY`/`GROQ_API_KEY` are
-placeholders), so the only runnable provider is the deterministic `fake` one. That
-provider scores by hashing the answer text, so its metrics measure the hash function,
-not model judgement. A smoke run produces a non-monotonic result — currently "poor"
-answers average 67% and "excellent" 71% — which is exactly what the harness is designed
-to expose rather than publish.
+Recorded from a complete run — 35 of 36 cases scored (97.2%), the one dropout being a
+provider schema-validation failure, not a harness problem.
 
-The harness therefore treats a fake-provider run as a **smoke run**: it marks the report
-`meaningful: false`, prints a warning, refuses to call the numbers quotable, and writes
-its artifacts to a gitignored path so a smoke report cannot be mistaken for results.
+| Metric | Value |
+|---|---|
+| Cases | 36 (35 scored, 97.2%) |
+| **MAE vs expected band midpoint** | **11.9 pp** |
+| **In-band rate** (score landed inside the expected band) | **77.1%** |
+| **Inter-model agreement** (Δ ≤ 20pp) | **94.3%** (mean gap 5.9 pp) |
+| Mean score across all cases | 57.9% |
+| Runtime | ~12 min, 72 provider calls |
 
-To produce the quotable baseline:
+By expected quality level — the evaluator is **monotonic**, which is the strongest single
+signal that it is actually discriminating rather than scoring everything alike:
+
+| Expected level | n | Mean score | MAE |
+|---|---|---|---|
+| excellent | 7 | 95.4% | 5.7 pp |
+| strong | 7 | 88.2% | 8.1 pp |
+| adequate | 7 | 68.9% | 17.1 pp |
+| weak | 6 | 24.2% | 15.8 pp |
+| poor | 8 | 14.4% | 13.1 pp |
+
+Per-criterion separation (mean awarded % on high-band minus low-band cases): every
+criterion discriminates, from **46.7 pp** (Clarity) to **100 pp** (MCQ Correctness and
+Justification). The weakest criterion is the actionable one — Clarity is the criterion
+least affected by answer quality.
+
+**Configuration:** `groq:openai/gpt-oss-120b` + `groq:qwen/qwen3.8-27b`.
+
+### Caveats to state alongside these numbers
+
+1. **Model-level diversity, not provider-level.** Both scorers run on one provider, so
+   94.3% agreement is corroboration between two *models*, not between two independent
+   vendors. The harness prints which kind a run used for exactly this reason. Configure
+   `LLM_SECONDARY_PROVIDER=openai` with an OpenAI key for genuine provider diversity.
+2. **1 of 72 calls (1.4%) returned structurally invalid JSON** from `gpt-oss-120b` — a
+   non-string `rubricCriterionVersionId`. The Zod contract caught it and no invalid score
+   was written, which is the designed failure path, but the true structured-output
+   reliability is ~98.6%, not 100%.
+3. **10 of 72 calls were rate-limited and needed retry.** Free-tier output-token caps are
+   tight; the harness backs off and honours the provider's stated wait. Keep
+   `EVAL_CONCURRENCY` low on free tiers.
+4. **Single run, single point in time.** Model versions change underneath you; re-run
+   before quoting.
+
+### Reproducing
 
 ```bash
-# free tier, and gives genuine two-model diversity
 LLM_PROVIDER=groq GROQ_API_KEY=... \
-LLM_SECONDARY_PROVIDER=openai OPENAI_API_KEY=... \
-pnpm --filter ai-service eval
+LLM_SECONDARY_PROVIDER=groq LLM_SECONDARY_MODEL=qwen/qwen3.8-27b \
+EVAL_CONCURRENCY=2 pnpm --filter ai-service eval
 ```
 
-Then record the reported MAE, in-band rate, agreement % and the weakest per-criterion
-separations here.
+A run is only reported as quotable when it used real providers **and** scored ≥95% of
+cases. Errored cases drop out of the metrics entirely, so a partial run reports only the
+survivors and looks equally confident — see `isQuotable()` in `evals/metrics.ts`.
 
 ---
 

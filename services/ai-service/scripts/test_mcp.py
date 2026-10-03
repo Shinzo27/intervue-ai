@@ -264,17 +264,24 @@ if first_answer_id:
     ev = tool_payload(body)
     if ev["ok"]:
         res = ev["result"]
+        # Provider-agnostic: assert the scoring CONTRACT, not how many models the
+        # local .env happens to configure. Hardcoding len(...) == 1 made this fail
+        # the moment a real two-model config was used, despite scoring correctly.
+        models = res["modelResults"]
+        model_ids = ",".join(
+            str(m.get("provider", "?")) + ":" + str(m.get("model", "?")) for m in models
+        )
         check(
-            "evaluate_answer (fake provider)",
+            "evaluate_answer (real scoring path)",
             res["ok"] is True
             and res["overallScore"] is not None
             and res["needsHumanReview"] is False
-            and len(res["modelResults"]) == 1
-            and res["modelResults"][0]["status"] == "COMPLETED",
-            f"score={res['overallScore']}/{res['maxScore']} models={[m['provider'] for m in res['modelResults']]}",
+            and len(models) >= 1
+            and all(m["status"] == "COMPLETED" for m in models),
+            f"score={res['overallScore']}/{res['maxScore']} models=[{model_ids}]",
         )
     else:
-        check("evaluate_answer (fake provider)", False, json.dumps(ev)[:200])
+        check("evaluate_answer (real scoring path)", False, json.dumps(ev)[:200])
 
     # persisted score rows via the read tool
     status, body = post(rpc("tools/call", 12, {

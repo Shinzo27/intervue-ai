@@ -22,6 +22,8 @@ export interface ProviderCaseResult {
   pct: number;
   criteria: { id: string; name: string; score: number; maxScore: number }[];
   usage: { totalTokens?: number };
+  /** Provider calls consumed (1 = no retry). High counts indicate throttling. */
+  attempts?: number;
   error?: string;
 }
 
@@ -38,6 +40,43 @@ export const mean = (xs: number[]): number =>
   xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
 
 export const round = (n: number, dp = 2): number => Number(n.toFixed(dp));
+
+/** Below this share of successfully scored cases, metrics are not publishable. */
+export const COMPLETENESS_MIN = 0.95;
+
+/**
+ * Decide whether a run produced publishable numbers.
+ *
+ * Both conditions matter. A deterministic fake provider measures its own hash
+ * rather than model judgement; and a run where many cases errored reports
+ * whatever survived, which looks equally confident while being biased toward
+ * whichever calls happened to get through.
+ */
+export function isQuotable(input: {
+  meaningful: boolean;
+  scoredCases: number;
+  cases: number;
+  minCompleteness?: number;
+}): { quotable: boolean; completeness: number; reason?: string } {
+  const min = input.minCompleteness ?? COMPLETENESS_MIN;
+  const completeness = input.cases > 0 ? input.scoredCases / input.cases : 0;
+
+  if (!input.meaningful) {
+    return {
+      quotable: false,
+      completeness,
+      reason: 'fake provider — metrics describe the deterministic hash, not the model',
+    };
+  }
+  if (completeness < min) {
+    return {
+      quotable: false,
+      completeness,
+      reason: `incomplete sample — ${input.scoredCases}/${input.cases} cases scored (need ${Math.round(min * 100)}%)`,
+    };
+  }
+  return { quotable: true, completeness };
+}
 
 export interface EvalMetrics {
   cases: number;
