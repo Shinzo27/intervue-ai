@@ -24,12 +24,15 @@ export const EvaluationResultSchema = z.object({
       rubricCriterionVersionId: z.string().min(1),
       name: z.string(),
       score: z.number().min(0),
-      maxScore: z.number().int().positive(),
+      // A question may legitimately have no rubric criteria; in that case a
+      // provider returns maxScore 0. Rejecting that produced cryptic schema
+      // failures instead of a clear "unscorable question" outcome.
+      maxScore: z.number().int().min(0),
       reasoning: z.string().min(1),
     }),
   ),
   overallScore: z.number().min(0),
-  maxScore: z.number().int().positive(),
+  maxScore: z.number().int().min(0),
   reasoning: z.string().min(1),
 });
 export type EvaluationResult = z.infer<typeof EvaluationResultSchema>;

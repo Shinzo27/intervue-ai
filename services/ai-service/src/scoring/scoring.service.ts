@@ -42,6 +42,56 @@ export class ScoringOrchestrator {
       ? [this.primary, this.secondary]
       : [this.primary];
 
+    // A question with no rubric criteria cannot be scored meaningfully. Record
+    // the attempt as FAILED with an explicit reason so the review screen shows
+    // why, rather than persisting a meaningless 0/0 score row.
+    if (ctx.rubricCriteria.length === 0) {
+      const rows = await Promise.all(
+        providers.map((p) =>
+          this.client.createEvaluation(
+            {
+              interviewSessionId: ctx.interview.id,
+              answerId,
+              model: `${p.name}:${p.model}`,
+            },
+            traceId,
+          ),
+        ),
+      );
+      await Promise.all(
+        rows.map((row) =>
+          this.client
+            .failEvaluation(
+              row.id,
+              {
+                error: 'QUESTION_HAS_NO_RUBRIC: no rubric criteria defined for this question',
+                result: { reason: 'no_rubric_criteria' },
+              },
+              traceId,
+            )
+            .catch(() => undefined),
+        ),
+      );
+      return {
+        ok: false,
+        answerId,
+        applicationId: ctx.application.id,
+        questionVersionId: ctx.questionVersion.id,
+        overallScore: null,
+        maxScore: null,
+        needsHumanReview: true,
+        modelResults: providers.map((p, i) => ({
+          provider: p.name,
+          model: p.model,
+          evaluationId: rows[i].id,
+          status: 'FAILED' as const,
+          error: 'QUESTION_HAS_NO_RUBRIC',
+        })),
+        aggregatedReasoning:
+          'This question has no rubric criteria, so it cannot be scored. Add rubric criteria to the question version and re-evaluate.',
+      };
+    }
+
     // One PENDING evaluation row per model.
     const evals = await Promise.all(
       providers.map((p) =>

@@ -26,6 +26,38 @@ export function createInterviewRouter(agent: InterviewerAgent): Router {
   const router = express.Router();
 
   /**
+   * POST /interviews/:id/start — opening turn. Idempotent: on an interview
+   * that already has a conversation, the agent re-asks the current question
+   * rather than restarting, so a page reload never loses progress.
+   */
+  router.post('/interviews/:id/start', async (req: Request, res: Response) => {
+    const rawId = req.params.id;
+    const interviewId = Array.isArray(rawId) ? rawId[0] : rawId;
+
+    if (!interviewId) {
+      res.status(400).json({ ok: false, error: 'interviewId is required' });
+      return;
+    }
+
+    try {
+      const result = await agent.start(interviewId, randomUUID());
+      res.json({ ok: true, traceId: randomUUID(), result });
+    } catch (error) {
+      const candidate = (error as { status?: number })?.status;
+      const status =
+        typeof candidate === 'number' && candidate >= 400 && candidate <= 599
+          ? candidate
+          : 502;
+      res.status(status).json({
+        ok: false,
+        error: {
+          message: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  });
+
+  /**
    * POST /interviews/:id/chat — non-streaming turn. Simplest contract for the
    * portal and the one the e2e suite exercises.
    */

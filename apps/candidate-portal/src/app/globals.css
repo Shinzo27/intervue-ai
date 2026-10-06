@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f8fb;
+  --panel: #ffffff;
+  --border: #e4e7ee;
+  --fg: #16181d;
+  --muted: #6b7280;
+  --accent: #4f46e5;
+  --accent-soft: #eef0ff;
+  --ok: #16a34a;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.bubble {
+  max-width: 42rem;
+  padding: 0.85rem 1.05rem;
+  border-radius: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.bubble-ai {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 0.25rem;
+}
+
+.bubble-me {
+  background: var(--accent);
+  color: white;
+  border-bottom-right-radius: 0.25rem;
+  margin-left: auto;
+}
+
+.progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 300ms ease;
+}
+
+textarea,
+input {
+  font: inherit;
+}

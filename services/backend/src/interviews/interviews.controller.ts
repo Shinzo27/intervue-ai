@@ -37,11 +37,6 @@ export class InterviewsController {
     return this.interviewsService.createInterview(dto.applicationId);
   }
 
-  @Get('access/:token')
-  async accessInterview(@Param('token') token: string) {
-    return this.interviewsService.accessInterview(token);
-  }
-
   @Post(':interviewId/start')
   async startInterview(@Param('interviewId') interviewId: string) {
     return this.interviewsService.startInterview(interviewId);
