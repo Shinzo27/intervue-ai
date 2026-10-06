@@ -8,6 +8,8 @@
   },
   "moduleNameMapper": {
     "^src/auth/utils/session$": "<rootDir>/mocks/auth-context.mock.ts",
-    "^@thallesp/nestjs-better-auth$": "<rootDir>/../src/__mocks__/@thallesp/nestjs-better-auth.ts"
+    "^@thallesp/nestjs-better-auth$": "<rootDir>/../src/__mocks__/@thallesp/nestjs-better-auth.ts",
+    "^better-auth$": "<rootDir>/mocks/better-auth/index.mock.ts",
+    "^better-auth/(.*)$": "<rootDir>/mocks/better-auth/subpaths.mock.ts"
   }
 }
