@@ -4,6 +4,8 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import express from 'express';
 import { getAuthContext } from '../auth/utils/session';
 import { InviteCandidateDto } from './dto/invite-candidate.dto';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/enums/permission.enum';
 
 @Controller('applications')
 export class ApplicationController {
@@ -28,6 +30,19 @@ export class ApplicationController {
   async findOne(@Req() request: express.Request, @Param('id') id: string) {
     const { organizationId } = await getAuthContext(request);
     return this.applicationService.findOne(organizationId, id);
+  }
+
+  /**
+   * Review aggregate for the recruiter review screen: frozen questions,
+   * answers, per-question scores with criterion breakdowns, every AI
+   * evaluation, and the decision with its override history.
+   * `interview:evaluate` is the capability that unlocks reviewing scores.
+   */
+  @Get(':id/review')
+  @RequirePermissions(Permission.INTERVIEW_EVALUATE)
+  async getReview(@Req() request: express.Request, @Param('id') id: string) {
+    const { organizationId } = await getAuthContext(request);
+    return this.applicationService.getReview(organizationId, id);
   }
 
   @Post('invite')
