@@ -12,9 +12,14 @@ const prisma = new PrismaClient({ adapter });
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
 
-  baseURL: 'http://localhost:3000',
+  baseURL: process.env.BACKEND_URL ?? 'http://localhost:3000',
 
-  trustedOrigins: ['http://localhost:3001'],
+  // Comma-separated list; the dashboard (3002) and marketing site (3001)
+  // both need to be trusted origins.
+  trustedOrigins: (process.env.FRONTEND_URL ?? 'http://localhost:3001')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 
   emailAndPassword: {
     enabled: true,

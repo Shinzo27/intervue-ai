@@ -110,6 +110,7 @@ org_id = require_id(data_of(org).get("id"), "organizationId")
 call("Set Active Organization", "POST", "/api/auth/organization/set-active",
      body={"organizationId": org_id})
 print(f"     organizationId = {org_id}")
+print(f"     runner email = {email}  (dev credentials for dashboard sign-in)")
 
 # ------------------------------------------------------------- 03 pipelines
 
