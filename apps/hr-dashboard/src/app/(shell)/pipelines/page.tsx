@@ -14,6 +14,8 @@ export default function PipelinesPage() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     apiFetch<Pipeline[]>("/pipelines")
@@ -29,6 +31,34 @@ export default function PipelinesPage() {
         Reusable interview templates. Publishing a version freezes it for the jobs
         that use it (draft template ≠ published snapshot).
       </p>
+
+      <div className="panel mt-4 flex items-center gap-2 p-3">
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="New pipeline name…"
+          className="panel-2 flex-1 px-3 py-2 text-sm outline-none"
+        />
+        <button
+          disabled={creating || !newName.trim()}
+          onClick={async () => {
+            setCreating(true);
+            try {
+              const created = await apiFetch<{ id: string }>("/pipelines", {
+                method: "POST",
+                body: JSON.stringify({ name: newName.trim() }),
+              });
+              window.location.href = `/pipelines/${created.id}`;
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "Could not create pipeline");
+              setCreating(false);
+            }
+          }}
+          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        >
+          {creating ? "Creating…" : "New pipeline"}
+        </button>
+      </div>
 
       {error && (
         <div className="panel mt-5 border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
@@ -59,13 +89,23 @@ export default function PipelinesPage() {
                   .sort((a, b) => b.version - a.version)[0];
                 return (
                   <tr key={p.id}>
-                    <td className="font-medium">{p.name}</td>
-                    <td className="muted text-xs">
-                      {versions ? versions.length : "—"}
+                    <td>
+                      <a
+                        href={`/pipelines/${p.id}`}
+                        className="font-medium hover:text-[var(--accent)] hover:underline"
+                      >
+                        {p.name}
+                      </a>
                     </td>
+                    <td className="muted text-xs">{versions ? versions.length : "—"}</td>
                     <td>
                       {!versions ? (
-                        <span className="chip">not loaded</span>
+                        <a
+                          href={`/pipelines/${p.id}`}
+                          className="chip hover:border-[var(--accent)]"
+                        >
+                          open builder
+                        </a>
                       ) : published ? (
                         <span className="chip chip-pass">v{published.version}</span>
                       ) : (

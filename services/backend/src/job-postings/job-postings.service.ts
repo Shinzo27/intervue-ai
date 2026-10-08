@@ -6,6 +6,11 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 
+import {
+  createPipelineVersionSnapshot,
+  validateDraftForPublish,
+} from '../pipelines/pipeline-snapshot';
+
 import { CreateJobPostingDto } from './dto/create-job-posting.dto';
 import { UpdateJobPostingDto } from './dto/update-job-posting.dto';
 
@@ -260,92 +265,14 @@ export class JobPostingsService {
       }
     }
 
-    // -------------------------
-    // GET NEXT VERSION
-    // -------------------------
-
-    const latestVersion = await this.prisma.pipelineVersion.findFirst({
-      where: {
-        pipelineId: jobPosting.pipeline.id,
-      },
-      orderBy: {
-        version: 'desc',
-      },
-    });
-
-    const nextVersion = (latestVersion?.version ?? 0) + 1;
-
-    // -------------------------
-    // CREATE SNAPSHOT
-    // -------------------------
+    validateDraftForPublish(jobPosting.pipeline.stages);
 
     return this.prisma.$transaction(async (tx) => {
-      const pipelineVersion = await tx.pipelineVersion.create({
-        data: {
-          pipelineId: jobPosting.pipeline!.id,
-          version: nextVersion,
-          status: 'PUBLISHED',
-        },
-      });
-
-      // -------------------------
-      // COPY STAGES
-      // -------------------------
-
-      for (const stage of jobPosting.pipeline!.stages) {
-        const stageVersion = await tx.pipelineStageVersion.create({
-          data: {
-            pipelineVersionId: pipelineVersion.id,
-            name: stage.name,
-            order: stage.order,
-          },
-        });
-
-        // -------------------------
-        // COPY QUESTIONS
-        // -------------------------
-
-        for (const question of stage.questions) {
-          const questionVersion = await tx.questionVersion.create({
-            data: {
-              pipelineStageVersionId: stageVersion.id,
-              question: question.question,
-              type: question.type,
-              order: question.order,
-              required: question.required,
-            },
-          });
-
-          // -------------------------
-          // COPY OPTIONS
-          // -------------------------
-
-          for (const option of question.options) {
-            await tx.questionOptionVersion.create({
-              data: {
-                questionVersionId: questionVersion.id,
-                text: option.text,
-                order: option.order,
-              },
-            });
-          }
-
-          // -------------------------
-          // COPY RUBRICS
-          // -------------------------
-
-          for (const rubric of question.rubricCriteria) {
-            await tx.rubricCriterionVersion.create({
-              data: {
-                questionVersionId: questionVersion.id,
-                name: rubric.name,
-                description: rubric.description,
-                maxScore: rubric.maxScore,
-              },
-            });
-          }
-        }
-      }
+      const pipelineVersion = await createPipelineVersionSnapshot(
+        tx,
+        jobPosting.pipeline!.id,
+        jobPosting.pipeline!.stages,
+      );
 
       // -------------------------
       // PUBLISH JOB

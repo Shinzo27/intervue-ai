@@ -50,6 +50,30 @@ export class PipelinesController {
     return this.pipelinesService.findOne(organizationId, id);
   }
 
+  /**
+   * Freeze the current draft into a new immutable PipelineVersion. Jobs
+   * already pinned to an older version keep using it (master-note §10).
+   */
+  @Post(':id/publish')
+  @RequirePermissions(Permission.PIPELINE_UPDATE)
+  async publishVersion(
+    @Req() request: express.Request,
+    @Param('id') id: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.pipelinesService.publishVersion(organizationId, id);
+  }
+
+  /** Published snapshots for this pipeline (read-only history). */
+  @Get(':id/versions')
+  @RequirePermissions(Permission.PIPELINE_VIEW)
+  async listVersions(@Req() request: express.Request, @Param('id') id: string) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.pipelinesService.listVersions(organizationId, id);
+  }
+
   @Patch(':id')
   @RequirePermissions(Permission.PIPELINE_UPDATE)
   async update(
