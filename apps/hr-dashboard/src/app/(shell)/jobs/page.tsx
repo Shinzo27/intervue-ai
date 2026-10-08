@@ -57,7 +57,14 @@ export default function JobsPage() {
             <tbody>
               {jobs.map((j) => (
                 <tr key={j.id}>
-                  <td className="font-medium">{j.title}</td>
+                  <td>
+                    <a
+                      href={`/jobs/${j.id}`}
+                      className="font-medium hover:text-[var(--accent)] hover:underline"
+                    >
+                      {j.title}
+                    </a>
+                  </td>
                   <td>
                     <span
                       className={

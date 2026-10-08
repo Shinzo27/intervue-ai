@@ -29,4 +29,11 @@ export enum Permission {
    * actor can never hold it (see ai-service action/permissions.ts).
    */
   DECISION_OVERRIDE = 'decision:override',
+
+  /**
+   * Read the organization's audit trail (human + AI actions). Compliance and
+   * debugging surface: who did what, when, and whether it was a human or the
+   * AI actor.
+   */
+  AUDIT_VIEW = 'audit:view',
 }

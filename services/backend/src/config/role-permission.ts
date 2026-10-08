@@ -22,6 +22,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.INTERVIEW_EVALUATE,
 
     Permission.DECISION_OVERRIDE,
+
+    // Compliance surface: who (human or AI) did what in this organization.
+    Permission.AUDIT_VIEW,
   ],
 
   [Role.ADMIN]: [
@@ -43,6 +46,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.INTERVIEW_EVALUATE,
 
     Permission.DECISION_OVERRIDE,
+    Permission.AUDIT_VIEW,
   ],
 
   [Role.RECRUITER]: [
@@ -59,6 +63,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
     // §44: recruiters/admins own the hiring decision, so they may override it.
     Permission.DECISION_OVERRIDE,
+
+    Permission.AUDIT_VIEW,
   ],
 
   [Role.INTERVIEWER]: [
