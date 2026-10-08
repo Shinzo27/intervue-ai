@@ -36,4 +36,20 @@ export class CandidateInterviewController {
 
     return this.interviewsService.startInterview(interviewId);
   }
+
+  /**
+   * The candidate's own conversation so far — used to restore the chat after
+   * a refresh (master-note §49: progress is never lost). No internal
+   * metadata, no scoring, no other candidate's data: the token scopes it.
+   */
+  @Get(':token/transcript')
+  async transcript(@Req() request: CandidateRequest) {
+    const interviewId = request.candidateInterview?.interviewId;
+
+    if (!interviewId) {
+      throw new Error('Candidate interview context missing');
+    }
+
+    return this.interviewsService.getCandidateTranscript(interviewId);
+  }
 }

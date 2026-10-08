@@ -79,7 +79,45 @@ export default function InterviewPage() {
         if (!res.ok) throw new Error(json?.message ?? "This link is not valid.");
         const payload = json.data ?? json;
         setAccess(payload);
-        setPhase(payload.status === "COMPLETED" ? "complete" : "intro");
+
+        if (payload.status === "COMPLETED") {
+          setPhase("complete");
+          return;
+        }
+
+        // Resume: restore the conversation if this candidate already started,
+        // so a refresh never loses their place (master-note §49).
+        const trRes = await fetch(
+          `/api/backend/interviews/access/${token}/transcript`,
+          { cache: "no-store" },
+        );
+        if (trRes.ok) {
+          const tr = (await trRes.json()) as {
+            data?: {
+              messages: { role: string; content: string }[];
+              progress?: TurnResult["progress"];
+            };
+            messages?: { role: string; content: string }[];
+            progress?: TurnResult["progress"];
+          };
+          const payloadTr = tr.data ?? tr;
+          const messages = payloadTr.messages ?? [];
+          if (messages.length > 0) {
+            setBubbles(
+              messages.map((m, i) => ({
+                id: i + 1,
+                role: m.role === "CANDIDATE" ? ("me" as const) : ("ai" as const),
+                text: m.content,
+              })),
+            );
+            nextId.current = messages.length + 1;
+            if (payloadTr.progress) setProgress(payloadTr.progress);
+            setPhase("chat");
+            return;
+          }
+        }
+
+        setPhase("intro");
       } catch (e) {
         setError(e instanceof Error ? e.message : "This link is not valid.");
         setPhase("error");
@@ -122,7 +160,7 @@ export default function InterviewPage() {
     }
   }, [access, applyTurn, token]);
 
-  /** Send the candidate's answer and render the interviewer's reply. */
+  /** Send the candidate's answer; the reply streams in over SSE. */
   const send = useCallback(async () => {
     const content = draft.trim();
     if (!content || !access || busy) return;
@@ -130,12 +168,67 @@ export default function InterviewPage() {
     setDraft("");
     setBusy(true);
     setError(null);
-    try {
-      const turn = await postJson<{ result: TurnResult }>(
-        `/api/interview/${access.interviewId}/chat`,
-        { content },
+
+    // The AI bubble is created on the first `delta` and grown in place, so the
+    // reply renders as it arrives instead of appearing all at once.
+    let aiId: number | null = null;
+    const appendDelta = (text: string) => {
+      if (aiId === null) {
+        const id = nextId.current++;
+        aiId = id;
+        setBubbles((prev) => [...prev, { id, role: "ai", text }]);
+        return;
+      }
+      const id = aiId;
+      setBubbles((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, text: b.text + text } : b)),
       );
-      applyTurn(turn.result);
+    };
+
+    try {
+      const res = await fetch(`/api/interview/${access.interviewId}/chat/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!res.ok || !res.body) {
+        throw new Error(`${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split("\n\n");
+        buffer = frames.pop() ?? "";
+
+        for (const frame of frames) {
+          const line = frame.split("\n").find((l) => l.startsWith("data: "));
+          if (!line) continue;
+
+          const event = JSON.parse(line.slice(6)) as
+            | { type: "start" }
+            | { type: "delta"; text: string }
+            | { type: "done"; result: TurnResult }
+            | { type: "error"; message: string };
+
+          if (event.type === "delta") {
+            appendDelta(event.text);
+          } else if (event.type === "done") {
+            setProgress(event.result.progress);
+            if (aiId === null) push("ai", event.result.reply);
+            if (event.result.interviewCompleted) setPhase("complete");
+          } else if (event.type === "error") {
+            throw new Error(event.message);
+          }
+        }
+      }
     } catch (e) {
       setError(
         e instanceof Error
@@ -145,7 +238,7 @@ export default function InterviewPage() {
     } finally {
       setBusy(false);
     }
-  }, [access, applyTurn, busy, draft, push]);
+  }, [access, busy, draft, push]);
 
   if (phase === "loading") {
     return <Centered>Checking your interview link…</Centered>;

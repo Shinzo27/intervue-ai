@@ -787,6 +787,62 @@ export class InterviewsService {
     });
   }
 
+  /**
+   * Candidate-safe transcript behind the invite token: the conversation as
+   * the candidate experienced it (role + text + time). Message metadata is
+   * internal (model names, fallback flags) and is deliberately not exposed.
+   * An interview with no conversation yet returns an empty list, so a fresh
+   * candidate resumes cleanly rather than getting a 404.
+   */
+  async getCandidateTranscript(interviewId: string) {
+    const interview = await this.prisma.interviewSession.findUnique({
+      where: { id: interviewId },
+      select: { id: true, status: true },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { interviewSessionId: interviewId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, role: true, content: true, createdAt: true },
+        },
+      },
+    });
+
+    // Progress is part of the resume payload: after a refresh the candidate
+    // should see the same progress bar they had before, not an empty one.
+    const [stages, answeredQuestions] = await Promise.all([
+      this.prisma.interviewStage.findMany({
+        where: { interviewSessionId: interviewId },
+        select: {
+          status: true,
+          pipelineStageVersion: { select: { _count: { select: { questions: true } } } },
+        },
+      }),
+      this.prisma.answer.count({ where: { interviewSessionId: interviewId } }),
+    ]);
+
+    return {
+      interviewId: interview.id,
+      status: interview.status,
+      messages: conversation?.messages ?? [],
+      progress: {
+        totalStages: stages.length,
+        completedStages: stages.filter((s) => s.status === 'COMPLETED').length,
+        totalQuestions: stages.reduce(
+          (total, s) => total + s.pipelineStageVersion._count.questions,
+          0,
+        ),
+        answeredQuestions,
+      },
+    };
+  }
+
   async getConversation(interviewId: string) {
     const interview = await this.prisma.interviewSession.findUnique({
       where: {
