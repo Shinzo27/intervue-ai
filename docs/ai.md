@@ -260,6 +260,11 @@ provider schema-validation failure, not a harness problem.
 | Mean score across all cases | 57.9% |
 | Runtime | ~12 min, 72 provider calls |
 
+**Run-to-run variance** (same fixtures, same models, a later run): MAE **12.2 pp**, in-band
+**68.6%**, inter-model agreement **91.4%** (mean gap 7.9 pp). LLM scoring is not deterministic,
+so treat roughly ±1 pp of MAE and several points of in-band rate as noise: use this harness to
+compare *changes* (a prompt or rubric edit), never to compare absolute runs with each other.
+
 By expected quality level — the evaluator is **monotonic**, which is the strongest single
 signal that it is actually discriminating rather than scoring everything alike:
 

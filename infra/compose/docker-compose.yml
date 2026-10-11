@@ -1,0 +1,128 @@
+# Intervue AI — full stack in one command.
+#
+#   docker compose -f infra/compose/docker-compose.yml up --build
+#
+# Brings up Postgres, Redis, the NestJS API, the AI service (MCP + interviewer)
+# and both Next.js apps. Migrations run automatically at backend startup.
+#
+# LLM keys are optional: with none set the AI service uses its deterministic
+# `fake` provider, so the whole product (interview → scoring → decision →
+# review) works offline. Set GROQ_API_KEY / OPENAI_API_KEY for real models.
+#
+# Ports on the host: API 3000 · AI service 3100 · dashboard 3002 · portal 3003
+name: intervue
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: intervue
+      POSTGRES_PASSWORD: intervue_dev
+      POSTGRES_DB: intervue_dev
+    # Deliberately not published to the host: this machine runs a native
+    # PostgreSQL on 5432. App containers reach it over the compose network.
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intervue -d intervue_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: services/backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://intervue:intervue_dev@postgres:5432/intervue_dev
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      PORT: "3000"
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-better-auth-secret-change-me}
+      # Both frontends call the API from the browser, so both are trusted.
+      FRONTEND_URL: http://localhost:3002,http://localhost:3003,http://localhost:3001
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-dev-internal-service-secret}
+      CANDIDATE_PORTAL_URL: http://localhost:3003
+      RECRUITER_DASHBOARD_URL: http://localhost:3002
+      # Optional: real email delivery for invitations/completion notifications.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      NOTIFICATION_FROM: ${NOTIFICATION_FROM:-Intervue AI <onboarding@resend.dev>}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-service:
+    build:
+      context: ../..
+      dockerfile: services/ai-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:3000/api/internal
+      BACKEND_INTERNAL_TOKEN: ${INTERNAL_SERVICE_SECRET:-dev-internal-service-secret}
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: "3100"
+      MCP_HTTP_TOKEN: ${MCP_HTTP_TOKEN:-dev-mcp-token}
+      # fake = deterministic offline scoring; openai/groq = real models.
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      LLM_SECONDARY_PROVIDER: ${LLM_SECONDARY_PROVIDER:-none}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    ports:
+      - "3100:3100"
+    depends_on:
+      - backend
+
+  hr-dashboard:
+    build:
+      context: ../..
+      dockerfile: apps/hr-dashboard/Dockerfile
+    restart: unless-stopped
+    environment:
+      # Browser-side calls go to the host-published API.
+      NEXT_PUBLIC_API_URL: http://localhost:3000/api
+      # Server-side proxy calls use the compose network.
+      BACKEND_URL: http://backend:3000/api
+    ports:
+      - "3002:3002"
+    depends_on:
+      - backend
+
+  candidate-portal:
+    build:
+      context: ../..
+      dockerfile: apps/candidate-portal/Dockerfile
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:3000/api
+      AI_SERVICE_URL: http://ai-service:3100
+    ports:
+      - "3003:3003"
+    depends_on:
+      - backend
+      - ai-service
+
+volumes:
+  postgres_data:
+  redis_data:
