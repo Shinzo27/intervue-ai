@@ -4,6 +4,7 @@ import { InternalServiceGuard } from './guards/internal-service.guard';
 import { InternalService } from './internal.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { InterviewsModule } from '../interviews/interviews.module';
+import { QueueModule } from '../queue/queue.module';
 
 /**
  * Service-to-service capability surface for ai-service (MCP tools).
@@ -11,7 +12,7 @@ import { InterviewsModule } from '../interviews/interviews.module';
  * single implementation.
  */
 @Module({
-  imports: [PrismaModule, InterviewsModule],
+  imports: [PrismaModule, InterviewsModule, QueueModule],
   controllers: [InternalController],
   providers: [InternalServiceGuard, InternalService],
 })

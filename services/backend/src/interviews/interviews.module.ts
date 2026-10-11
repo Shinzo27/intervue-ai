@@ -4,9 +4,10 @@ import { CandidateInterviewController } from './candidate-interview.controller';
 import { InterviewsService } from './interviews.service';
 import { CandidateTokenGuard } from './guards/candidate-token.guard';
 import { PrismaModule } from '../prisma/prisma.module';
+import { QueueModule } from '../queue/queue.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, QueueModule],
   controllers: [InterviewsController, CandidateInterviewController],
   providers: [InterviewsService, CandidateTokenGuard],
   exports: [InterviewsService],

@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InterviewsService } from '../interviews/interviews.service';
+import { InterviewNotificationsService } from '../queue/interview-notifications.service';
 import { CreateInternalMessageDto } from './dto/create-internal-message.dto';
 import { SubmitInternalAnswerDto } from './dto/submit-internal-answer.dto';
 import { CreateEvaluationDto } from './dto/create-evaluation.dto';
@@ -31,6 +32,7 @@ export class InternalService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly interviews: InterviewsService,
+    private readonly interviewNotifications: InterviewNotificationsService,
   ) {}
 
   // ------------------------------------------------------------------ reads
@@ -885,6 +887,12 @@ export class InternalService {
         data: { status: 'COMPLETED', completedAt: now },
       }),
     ]);
+
+    // Notify the job owner — once, and only on the transition that completed it.
+    await this.interviewNotifications.notifyCompletion(
+      interviewId,
+      interview.applicationId,
+    );
 
     return { interviewId, status: 'COMPLETED', alreadyCompleted: false };
   }

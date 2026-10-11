@@ -67,7 +67,18 @@ function buildService(overrides: Overrides = {}) {
     $transaction: jest.fn(async (cb: (t: typeof tx) => Promise<unknown>) => cb(tx)),
   } as unknown as PrismaService;
 
-  return { service: new InterviewsService(prisma), calls, prisma };
+  return {
+    service: new InterviewsService(
+      prisma,
+      // Notification is a post-commit side effect; override tests do not
+      // exercise it, so a no-op double keeps the unit under test focused.
+      { notifyCompletion: jest.fn(async () => undefined) } as unknown as ConstructorParameters<
+        typeof InterviewsService
+      >[1],
+    ),
+    calls,
+    prisma,
+  };
 }
 
 describe('InterviewsService.overrideDecision', () => {

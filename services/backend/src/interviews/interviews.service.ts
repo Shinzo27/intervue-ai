@@ -10,13 +10,17 @@ import {
   JobPosting,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { InterviewNotificationsService } from '../queue/interview-notifications.service';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateDecisionDto } from './dto/create-decision.dto';
 import { OverrideDecisionDto } from './dto/override-decision.dto';
 @Injectable()
 export class InterviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly interviewNotifications: InterviewNotificationsService,
+  ) {}
 
   private calculateMockScore(content: string): number {
     const length = content.trim().length;
@@ -443,7 +447,7 @@ export class InterviewsService {
       throw new BadRequestException('Question has already been answered');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Save answer
       const answer = await tx.answer.create({
         data: {
@@ -595,6 +599,17 @@ export class InterviewsService {
         interviewCompleted: true,
       };
     });
+
+    // Side effect after commit: the interview is durable before we notify, and
+    // a notification failure is never allowed to fail the candidate's answer.
+    if (result.interviewCompleted) {
+      await this.interviewNotifications.notifyCompletion(
+        interviewId,
+        interview.applicationId,
+      );
+    }
+
+    return result;
   }
 
   async evaluateAnswer(interviewId: string, answerId: string) {
