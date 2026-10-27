@@ -33,7 +33,9 @@ export interface Stage {
   questions: Question[];
 }
 
-const QUESTION_TYPES = ["TEXT", "MCQ", "MULTI_LINE", "CODE"] as const;
+// Must match the backend QuestionType enum exactly — a value outside it is
+// rejected by the DTO validator (400) before it ever reaches Prisma.
+const QUESTION_TYPES = ["SINGLE_LINE", "MULTI_LINE", "MCQ"] as const;
 
 /** One stage card: questions, options and rubric criteria (draft editing). */
 export function StageEditor({
@@ -142,7 +144,7 @@ export function StageEditor({
 
 function AddQuestion({ stage, onChanged }: { stage: Stage; onChanged: () => void }) {
   const [text, setText] = useState("");
-  const [type, setType] = useState<(typeof QUESTION_TYPES)[number]>("TEXT");
+  const [type, setType] = useState<(typeof QUESTION_TYPES)[number]>("MULTI_LINE");
   const [busy, setBusy] = useState(false);
 
   return (
