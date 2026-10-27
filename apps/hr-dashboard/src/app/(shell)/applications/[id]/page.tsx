@@ -99,6 +99,13 @@ export default function ApplicationReviewPage() {
 
   const pct = review.totals.percentage;
   const failedModels = review.evaluations.filter((e) => e.status === "FAILED");
+  // A question can have an answer but no score (no rubric on the pinned snapshot) —
+  // in that case `totals` only covers what could be scored, so say so instead of
+  // letting a bare "100%" read as a perfect interview.
+  const allQuestions = review.stages.flatMap((s) => s.questions);
+  const unscored = allQuestions.filter((q) => q.answer && !q.score).length;
+  const unanswered = allQuestions.filter((q) => !q.answer).length;
+  const partial = unscored > 0 || unanswered > 0;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -128,7 +135,18 @@ export default function ApplicationReviewPage() {
           )}
           <span className="chip">
             score {review.totals.totalScore}/{review.totals.maxScore} · {pct}%
+            {partial ? " of scored" : ""}
           </span>
+          {unscored > 0 && (
+            <span className="chip chip-warn">
+              {unscored} question{unscored > 1 ? "s" : ""} unscored
+            </span>
+          )}
+          {unanswered > 0 && (
+            <span className="chip chip-warn">
+              {unanswered} unanswered
+            </span>
+          )}
           {failedModels.length > 0 && (
             <span className="chip chip-warn">
               {failedModels.length} model run{failedModels.length > 1 ? "s" : ""} failed

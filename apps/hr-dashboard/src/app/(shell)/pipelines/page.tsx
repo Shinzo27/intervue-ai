@@ -124,8 +124,8 @@ export default function PipelinesPage() {
       </section>
 
       <p className="muted mt-4 text-xs">
-        The list endpoint returns pipeline rows only — version counts and snapshots load
-        on the pipeline detail page (part of the builder slice, next in Phase 8).
+        This list loads pipeline rows only; version history and published snapshots are
+        on each pipeline's builder page.
       </p>
     </div>
   );
