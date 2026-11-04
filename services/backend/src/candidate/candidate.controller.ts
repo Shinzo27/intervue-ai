@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { CandidateService } from './candidate.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
-import express from 'express';
+import type express from 'express';
 import { getAuthContext } from '../auth/utils/session';
 import { CandidateTokenGuard } from '../auth/guards/candidate-token.guard';
 import type { CandidateAuthRequest } from '../auth/guards/candidate-token.guard';

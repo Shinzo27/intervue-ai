@@ -533,10 +533,26 @@ export class InternalService {
    * TRANSCRIPT — the conversational interviewer persists candidate speech.
    */
   async submitAnswer(interviewId: string, dto: SubmitInternalAnswerDto) {
-    const result = await this.interviews.submitAnswer(interviewId, {
-      questionId: dto.questionId,
-      content: dto.content,
+    // Service-to-service call: InternalServiceGuard already authenticated the
+    // caller, so the tenant is resolved from the row instead of being passed
+    // in. submitAnswer() requires it, so this path can never skip the boundary.
+    const interview = await this.prisma.interviewSession.findUnique({
+      where: { id: interviewId },
+      select: { application: { select: { organizationId: true } } },
     });
+
+    if (!interview) {
+      throw new NotFoundException('Interview session not found');
+    }
+
+    const result = await this.interviews.submitAnswer(
+      interviewId,
+      {
+        questionId: dto.questionId,
+        content: dto.content,
+      },
+      interview.application.organizationId,
+    );
 
     const answerId = (result as { answer?: { id?: string } }).answer?.id;
     if (answerId) {

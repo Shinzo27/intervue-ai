@@ -14,6 +14,12 @@ export interface CandidateRequest extends Request {
   candidateInterview?: {
     applicationId: string;
     interviewId: string;
+    /**
+     * The token's own organization. Service methods require an org to scope
+     * their lookup; the candidate path passes the one the token resolved, so
+     * the tenant boundary holds without trusting anything the caller sends.
+     */
+    organizationId: string;
     candidateName: string;
     jobTitle: string;
   };
@@ -71,6 +77,7 @@ export class CandidateTokenGuard implements CanActivate {
     request.candidateInterview = {
       applicationId: application.id,
       interviewId: application.interviewSession.id,
+      organizationId: application.organizationId,
       candidateName: [
         application.candidate?.firstName,
         application.candidate?.lastName,

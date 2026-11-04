@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import express from 'express';
+import type express from 'express';
 
 import { JobPostingsService } from './job-postings.service';
 

@@ -9,7 +9,7 @@ import {
   Patch,
   Delete,
 } from '@nestjs/common';
-import express from 'express';
+import type express from 'express';
 import { UpdatePipelineDto } from './dto/update-pipeline.dto';
 import { PipelinesService } from './pipelines.service';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';

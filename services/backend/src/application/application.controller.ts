@@ -1,13 +1,23 @@
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApplicationService } from './application.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
-import express from 'express';
+import type express from 'express';
 import { getAuthContext } from '../auth/utils/session';
 import { InviteCandidateDto } from './dto/invite-candidate.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/enums/permission.enum';
+import { PermissionsGuard } from '../auth/guards/permission.guard';
 
 @Controller('applications')
+@UseGuards(PermissionsGuard)
 export class ApplicationController {
   constructor(private readonly applicationService: ApplicationService) {}
 

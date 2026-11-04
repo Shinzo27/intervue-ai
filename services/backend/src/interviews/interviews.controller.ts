@@ -17,15 +17,20 @@ import { getAuthContext } from 'src/auth/utils/session';
 import { PermissionsGuard } from '../auth/guards/permission.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/enums/permission.enum';
-import express from 'express';
+import type express from 'express';
 
 /**
  * Recruiter-facing interview surface.
  *
- * The guard is class-level so every route resolves the caller's active
- * organization; routes that declare no permission still pass through it, but
- * the privileged decision routes below REQUIRE their capability — recording a
- * decision and replacing one are different levels of authority (§43, §44).
+ * Every route resolves the caller's active organization and hands it to the
+ * service, which scopes its lookup on `application.organizationId` in the same
+ * query — an interview id from another tenant reads as 404, never as another
+ * tenant's data (master-note §53: queries must prevent cross-tenant access).
+ *
+ * Routes that declare no permission still run the class-level guard, so the
+ * caller must be an authenticated member of the active organization. The
+ * privileged decision routes additionally REQUIRE their capability — recording
+ * a decision and replacing one are different levels of authority (§43, §44).
  */
 @Controller('interviews')
 @UseGuards(PermissionsGuard)
@@ -33,52 +38,107 @@ export class InterviewsController {
   constructor(private readonly interviewsService: InterviewsService) {}
 
   @Post()
-  async createInterview(@Body() dto: CreateInterviewDto) {
-    return this.interviewsService.createInterview(dto.applicationId);
+  async createInterview(
+    @Req() request: express.Request,
+    @Body() dto: CreateInterviewDto,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.createInterview(
+      dto.applicationId,
+      organizationId,
+    );
   }
 
   @Post(':interviewId/start')
-  async startInterview(@Param('interviewId') interviewId: string) {
-    return this.interviewsService.startInterview(interviewId);
+  async startInterview(
+    @Req() request: express.Request,
+    @Param('interviewId') interviewId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.startInterview(interviewId, organizationId);
   }
 
   @Get(':interviewId/current')
-  async getCurrentInterview(@Param('interviewId') interviewId: string) {
-    return this.interviewsService.getCurrentInterview(interviewId);
+  async getCurrentInterview(
+    @Req() request: express.Request,
+    @Param('interviewId') interviewId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.getCurrentInterview(
+      interviewId,
+      organizationId,
+    );
   }
 
   @Post(':interviewId/answers')
   async submitAnswer(
+    @Req() request: express.Request,
     @Param('interviewId') interviewId: string,
     @Body() dto: SubmitAnswerDto,
   ) {
-    return this.interviewsService.submitAnswer(interviewId, dto);
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.submitAnswer(
+      interviewId,
+      dto,
+      organizationId,
+    );
   }
 
   @Post(':interviewId/answers/:answerId/evaluate')
   async evaluateAnswer(
+    @Req() request: express.Request,
     @Param('interviewId') interviewId: string,
     @Param('answerId') answerId: string,
   ) {
-    return this.interviewsService.evaluateAnswer(interviewId, answerId);
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.evaluateAnswer(
+      interviewId,
+      answerId,
+      organizationId,
+    );
   }
 
   @Post(':interviewId/conversation')
-  async createConversation(@Param('interviewId') interviewId: string) {
-    return this.interviewsService.createConversation(interviewId);
+  async createConversation(
+    @Req() request: express.Request,
+    @Param('interviewId') interviewId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.createConversation(
+      interviewId,
+      organizationId,
+    );
   }
 
   @Post(':interviewId/conversation/messages')
   async createMessage(
+    @Req() request: express.Request,
     @Param('interviewId') interviewId: string,
     @Body() dto: CreateMessageDto,
   ) {
-    return this.interviewsService.createMessage(interviewId, dto);
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.createMessage(
+      interviewId,
+      dto,
+      organizationId,
+    );
   }
 
   @Get(':interviewId/conversation')
-  async getConversation(@Param('interviewId') interviewId: string) {
-    return this.interviewsService.getConversation(interviewId);
+  async getConversation(
+    @Req() request: express.Request,
+    @Param('interviewId') interviewId: string,
+  ) {
+    const { organizationId } = await getAuthContext(request);
+
+    return this.interviewsService.getConversation(interviewId, organizationId);
   }
 
   @Post(':interviewId/decision')
@@ -90,7 +150,11 @@ export class InterviewsController {
   ) {
     const { organizationId } = await getAuthContext(request);
 
-    return this.interviewsService.createDecision(interviewId, dto, organizationId);
+    return this.interviewsService.createDecision(
+      interviewId,
+      dto,
+      organizationId,
+    );
   }
 
   /**

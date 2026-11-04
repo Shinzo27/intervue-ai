@@ -66,10 +66,13 @@ export class InterviewsService {
     return 0;
   }
 
-  async createInterview(applicationId: string) {
-    const application = await this.prisma.application.findUnique({
+  async createInterview(applicationId: string, organizationId: string) {
+    // Scoped read: an application id from another tenant must read as "not
+    // found" rather than create an interview in the caller's org.
+    const application = await this.prisma.application.findFirst({
       where: {
         id: applicationId,
+        organizationId,
       },
       include: {
         jobPosting: {
@@ -238,10 +241,11 @@ export class InterviewsService {
     };
   }
 
-  async startInterview(interviewId: string) {
-    const interview = await this.prisma.interviewSession.findUnique({
+  async startInterview(interviewId: string, organizationId: string) {
+    const interview = await this.prisma.interviewSession.findFirst({
       where: {
         id: interviewId,
+        application: { organizationId },
       },
       include: {
         application: true,
@@ -313,10 +317,11 @@ export class InterviewsService {
     });
   }
 
-  async getCurrentInterview(interviewId: string) {
-    const interview = await this.prisma.interviewSession.findUnique({
+  async getCurrentInterview(interviewId: string, organizationId: string) {
+    const interview = await this.prisma.interviewSession.findFirst({
       where: {
         id: interviewId,
+        application: { organizationId },
       },
       include: {
         application: {
@@ -395,10 +400,15 @@ export class InterviewsService {
     };
   }
 
-  async submitAnswer(interviewId: string, dto: SubmitAnswerDto) {
-    const interview = await this.prisma.interviewSession.findUnique({
+  async submitAnswer(
+    interviewId: string,
+    dto: SubmitAnswerDto,
+    organizationId: string,
+  ) {
+    const interview = await this.prisma.interviewSession.findFirst({
       where: {
         id: interviewId,
+        application: { organizationId },
       },
       include: {
         currentStage: true,
@@ -612,11 +622,16 @@ export class InterviewsService {
     return result;
   }
 
-  async evaluateAnswer(interviewId: string, answerId: string) {
+  async evaluateAnswer(
+    interviewId: string,
+    answerId: string,
+    organizationId: string,
+  ) {
     const answer = await this.prisma.answer.findFirst({
       where: {
         id: answerId,
         interviewSessionId: interviewId,
+        interviewSession: { application: { organizationId } },
       },
       include: {
         questionVersion: {
@@ -744,10 +759,11 @@ export class InterviewsService {
     });
   }
 
-  async createConversation(interviewId: string) {
-    const interview = await this.prisma.interviewSession.findUnique({
+  async createConversation(interviewId: string, organizationId: string) {
+    const interview = await this.prisma.interviewSession.findFirst({
       where: {
         id: interviewId,
+        application: { organizationId },
       },
     });
 
@@ -772,10 +788,15 @@ export class InterviewsService {
     });
   }
 
-  async createMessage(interviewId: string, dto: CreateMessageDto) {
-    const interview = await this.prisma.interviewSession.findUnique({
+  async createMessage(
+    interviewId: string,
+    dto: CreateMessageDto,
+    organizationId: string,
+  ) {
+    const interview = await this.prisma.interviewSession.findFirst({
       where: {
         id: interviewId,
+        application: { organizationId },
       },
     });
 
@@ -809,9 +830,12 @@ export class InterviewsService {
    * An interview with no conversation yet returns an empty list, so a fresh
    * candidate resumes cleanly rather than getting a 404.
    */
-  async getCandidateTranscript(interviewId: string) {
-    const interview = await this.prisma.interviewSession.findUnique({
-      where: { id: interviewId },
+  async getCandidateTranscript(interviewId: string, organizationId: string) {
+    const interview = await this.prisma.interviewSession.findFirst({
+      where: {
+        id: interviewId,
+        application: { organizationId },
+      },
       select: { id: true, status: true },
     });
 
@@ -858,10 +882,11 @@ export class InterviewsService {
     };
   }
 
-  async getConversation(interviewId: string) {
-    const interview = await this.prisma.interviewSession.findUnique({
+  async getConversation(interviewId: string, organizationId: string) {
+    const interview = await this.prisma.interviewSession.findFirst({
       where: {
         id: interviewId,
+        application: { organizationId },
       },
     });
 
@@ -892,7 +917,7 @@ export class InterviewsService {
   async createDecision(
     interviewId: string,
     dto: CreateDecisionDto,
-    organizationId?: string,
+    organizationId: string,
   ) {
     const interview = await this.prisma.interviewSession.findUnique({
       where: {
@@ -908,12 +933,8 @@ export class InterviewsService {
     }
 
     // Tenant boundary: callers act only inside their active organization.
-    // Absent an explicit org (internal service-to-service calls) the check is
-    // skipped, so this cannot break the AI capability layer.
-    if (
-      organizationId &&
-      interview.application.organizationId !== organizationId
-    ) {
+    // Required, not optional, so no caller can opt out of the check.
+    if (interview.application.organizationId !== organizationId) {
       throw new NotFoundException('Interview session not found');
     }
 
@@ -961,7 +982,7 @@ export class InterviewsService {
     interviewId: string,
     userId: string,
     dto: OverrideDecisionDto,
-    organizationId?: string,
+    organizationId: string,
   ) {
     const interview = await this.prisma.interviewSession.findUnique({
       where: {
@@ -979,10 +1000,8 @@ export class InterviewsService {
     // Tenant boundary (§44/§64): a recruiter may only override decisions that
     // belong to their own organization. Reported as 404 rather than 403 so the
     // endpoint does not confirm the existence of another tenant's interview.
-    if (
-      organizationId &&
-      interview.application.organizationId !== organizationId
-    ) {
+    // Required, not optional, so no caller can opt out of the check.
+    if (interview.application.organizationId !== organizationId) {
       throw new NotFoundException('Interview session not found');
     }
 

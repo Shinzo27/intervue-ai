@@ -39,12 +39,14 @@ by identity. That is what makes "candidates never need an account" safe.
 | `decision:override` | ✅ | ✅ | ✅ | — |
 | `audit:view` | ✅ | ✅ | ✅ | — |
 
-**Known inconsistency (not yet fixed):** the application review screen is gated on
-`interview:evaluate`, but `RECRUITER` does not hold that capability — so a recruiter can own the
-decision (`decision:override`) yet cannot open the screen that shows the scores behind it. The
-fix is a product decision: either grant `interview:evaluate` to `RECRUITER`, or split
-"view evaluation" from "run evaluation" into two capabilities. Currently `OWNER`, `ADMIN` and
-`INTERVIEWER` can open the review screen; `RECRUITER` gets 403.
+**Known inconsistency (open product decision, gate now enforced):** the application review screen
+is gated on `interview:evaluate`, but `RECRUITER` does not hold that capability — so a recruiter
+can own the decision (`decision:override`) yet cannot open the screen that shows the scores behind
+it. The route declared `@RequirePermissions` but the controller never ran `PermissionsGuard`, so
+the metadata was inert and the API answered every member of the organization; the guard is wired
+now, so `RECRUITER` gets 403 as this table says. What remains is the product decision: either grant
+`interview:evaluate` to `RECRUITER`, or split "view evaluation" from "run evaluation" into two
+capabilities. Currently `OWNER`, `ADMIN` and `INTERVIEWER` can open the review screen.
 
 ## 3. Role-by-role walkthrough
 

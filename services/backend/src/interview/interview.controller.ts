@@ -1,6 +1,6 @@
-import { Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { Controller, Param, Post, Req } from '@nestjs/common';
 import { InterviewService } from './interview.service';
-import express from 'express';
+import type express from 'express';
 import { getAuthContext } from '../auth/utils/session';
 
 @Controller('interviews')
@@ -17,10 +17,5 @@ export class InterviewController {
       organizationId,
       applicationId,
     );
-  }
-
-  @Get('entry/:token')
-  getByToken(@Param('token') token: string) {
-    return this.interviewService.getByToken(token);
   }
 }

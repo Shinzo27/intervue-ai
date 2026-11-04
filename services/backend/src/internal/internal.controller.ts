@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Public } from '@thallesp/nestjs-better-auth';
-import express from 'express';
+import type express from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { InternalServiceGuard } from './guards/internal-service.guard';
 import { InternalService } from './internal.service';

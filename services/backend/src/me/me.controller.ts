@@ -1,5 +1,5 @@
 import { Controller, Get, Req } from '@nestjs/common';
-import express from 'express';
+import type express from 'express';
 import { auth } from '../auth/auth';
 import { fromNodeHeaders } from 'better-auth/node';
 import { MeService } from './me.service';

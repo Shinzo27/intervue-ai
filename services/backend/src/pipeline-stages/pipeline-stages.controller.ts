@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import express from 'express';
+import type express from 'express';
 
 import { PipelineStagesService } from './pipeline-stages.service';
 import { CreatePipelineStageDto } from './dto/create-pipeline-stage.dto';

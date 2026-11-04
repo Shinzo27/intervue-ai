@@ -26,15 +26,18 @@ export class CandidateInterviewController {
   /** Start the interview behind the token (NOT_STARTED → IN_PROGRESS). */
   @Post(':token/start')
   async start(@Req() request: CandidateRequest) {
-    const interviewId = request.candidateInterview?.interviewId;
+    const context = request.candidateInterview;
 
-    if (!interviewId) {
+    if (!context) {
       // Unreachable when the guard ran; kept so a future route edit that
       // drops the guard fails loudly instead of starting the wrong interview.
       throw new Error('Candidate interview context missing');
     }
 
-    return this.interviewsService.startInterview(interviewId);
+    return this.interviewsService.startInterview(
+      context.interviewId,
+      context.organizationId,
+    );
   }
 
   /**
@@ -44,12 +47,15 @@ export class CandidateInterviewController {
    */
   @Get(':token/transcript')
   async transcript(@Req() request: CandidateRequest) {
-    const interviewId = request.candidateInterview?.interviewId;
+    const context = request.candidateInterview;
 
-    if (!interviewId) {
+    if (!context) {
       throw new Error('Candidate interview context missing');
     }
 
-    return this.interviewsService.getCandidateTranscript(interviewId);
+    return this.interviewsService.getCandidateTranscript(
+      context.interviewId,
+      context.organizationId,
+    );
   }
 }
