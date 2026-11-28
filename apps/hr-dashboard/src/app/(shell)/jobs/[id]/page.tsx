@@ -1,266 +1,381 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useState, type FormEvent, type ReactNode } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowRight, Lock, MoreHorizontal, Rocket, Trash2, UserPlus, Users, Workflow } from "lucide-react";
+import { Alert } from "@repo/ui/alert";
+import { Badge } from "@repo/ui/badge";
+import { Button, IconButton } from "@repo/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
+import { ConfirmDialog } from "@repo/ui/confirm-dialog";
+import { DataTable, type Column } from "@repo/ui/data-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/dropdown-menu";
+import { EmptyState } from "@repo/ui/empty-state";
+import { Field } from "@repo/ui/field";
+import { Input, Textarea } from "@repo/ui/input";
+import { PageHeader } from "@repo/ui/page-header";
+import { Select } from "@repo/ui/select";
+import { Skeleton } from "@repo/ui/skeleton";
+import { StatCard } from "@repo/ui/stat-card";
+import { StatusPill } from "@repo/ui/status-pill";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { toast } from "@repo/ui/toast";
+import { CopyIconButton } from "@/components/copy-button";
+import { InviteCandidateSheet } from "@/components/jobs/invite-candidate-sheet";
 import { apiFetch } from "@/lib/api";
-
-interface Job {
-  id: string;
-  title: string;
-  status: string;
-  createdAt: string;
-  pipeline: { id: string; name: string } | null;
-  pipelineVersion: { id: string; version: number; publishedAt: string } | null;
-}
-
-interface Application {
-  id: string;
-  status: string;
-  inviteToken: string;
-  jobPostingId: string;
-  createdAt: string;
-  candidate: { firstName: string; lastName: string; email: string };
-}
+import { errorMessage, formatDate, formatDateTime, fullName } from "@/lib/format";
+import type { Application, Job, PipelineSummary } from "@/lib/types";
+import { interviewLink } from "@/lib/urls";
+import { useResource } from "@/lib/use-resource";
 
 export default function JobDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params?.id;
+  const id = useParams<{ id: string }>()?.id ?? null;
+  const router = useRouter();
+  const [tab, setTab] = useState("overview");
 
-  const [job, setJob] = useState<Job | null>(null);
-  const [apps, setApps] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [invite, setInvite] = useState({ firstName: "", lastName: "", email: "" });
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const { data, error, loading, refresh } = useResource(id, async () => {
+    const [job, applications, pipelines] = await Promise.all([
+      apiFetch<Job>(`/job-postings/${id}`),
+      apiFetch<Application[]>("/applications"),
+      apiFetch<PipelineSummary[]>("/pipelines"),
+    ]);
+    return { job, applications: applications.filter((a) => a.jobPostingId === id), pipelines };
+  });
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    try {
-      const [j, all] = await Promise.all([
-        apiFetch<Job>(`/job-postings/${id}`),
-        apiFetch<Application[]>("/applications"),
-      ]);
-      setJob(j);
-      setApps(all.filter((a) => a.jobPostingId === id));
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load job");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  if (loading) return <DetailSkeleton />;
+  if (!data) {
+    return (
+      <EmptyState
+        title="Job not found"
+        description={error ?? "It may have been deleted, or it belongs to another organization."}
+        action={
+          <Button asChild variant="secondary">
+            <Link href="/jobs">Back to jobs</Link>
+          </Button>
+        }
+      />
+    );
+  }
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { job, applications } = data;
+  // GET /job-postings/:id returns pipelineId but not the pipeline relation.
+  const pipeline = job.pipeline ?? data.pipelines.find((p) => p.id === job.pipelineId) ?? null;
+  const isDraft = job.status === "DRAFT";
+  const isPublished = job.status === "PUBLISHED";
+  const count = (...statuses: string[]) => applications.filter((a) => statuses.includes(a.status)).length;
 
   async function publish() {
-    setBusy(true);
-    setError(null);
     try {
-      await apiFetch(`/job-postings/${id}/publish`, { method: "POST" });
-      await load();
+      await apiFetch(`/job-postings/${job.id}/publish`, { method: "POST" });
+      toast.success("Job published", "The pipeline version is now frozen for this job.");
+      await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Publish failed");
-    } finally {
-      setBusy(false);
+      toast.error("Couldn't publish", errorMessage(e));
     }
   }
 
-  /** Invite → create the interview session → show the candidate link. */
-  async function inviteCandidate(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    setInviteLink(null);
+  async function removeDraft() {
     try {
-      const application = await apiFetch<{ id: string; inviteToken: string }>(
-        "/applications/invite",
-        {
-          method: "POST",
-          body: JSON.stringify({ ...invite, jobPostingId: id }),
-        },
-      );
-
-      await apiFetch("/interviews", {
-        method: "POST",
-        body: JSON.stringify({ applicationId: application.id }),
-      });
-
-      setInviteLink(`http://localhost:3003/interview/${application.inviteToken}`);
-      setInvite({ firstName: "", lastName: "", email: "" });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Invite failed");
-    } finally {
-      setBusy(false);
+      await apiFetch(`/job-postings/${job.id}`, { method: "DELETE" });
+      toast.success("Draft deleted");
+      router.push("/jobs");
+    } catch (e) {
+      toast.error("Couldn't delete", errorMessage(e));
     }
   }
 
-  if (loading) return <p className="muted text-sm">Loading job…</p>;
-  if (!job)
-    return (
-      <div className="panel border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
-        {error ?? "Job not found"}
-      </div>
-    );
+  const inviteButton = (
+    <Button disabled={!isPublished}>
+      <UserPlus /> Invite candidate
+    </Button>
+  );
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <a href="/jobs" className="muted text-xs hover:underline">
-        ← Jobs
-      </a>
+    <>
+      <PageHeader
+        eyebrow={
+          <>
+            <StatusPill status={job.status} />
+            {job.pipelineVersion && (
+              <Badge variant="outline">
+                <Lock /> Pipeline v{job.pipelineVersion.version} frozen
+              </Badge>
+            )}
+          </>
+        }
+        title={job.title}
+        description={job.description || "No description yet."}
+        actions={
+          <>
+            {isDraft && (
+              <ConfirmDialog
+                trigger={
+                  <Button disabled={!pipeline}>
+                    <Rocket /> Publish job
+                  </Button>
+                }
+                title="Publish this job?"
+                description={`Publishing freezes the current version of “${pipeline?.name ?? "the pipeline"}” for this job. Later pipeline edits won't change its interviews, and the job can no longer be edited.`}
+                confirmLabel="Publish"
+                onConfirm={publish}
+              />
+            )}
+            {isPublished && (
+              <InviteCandidateSheet jobId={job.id} jobTitle={job.title} trigger={inviteButton} onInvited={refresh} />
+            )}
+            {isDraft && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton aria-label="More actions" variant="secondary">
+                    <MoreHorizontal />
+                  </IconButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <ConfirmDialog
+                    trigger={
+                      <DropdownMenuItem destructive onSelect={(e) => e.preventDefault()}>
+                        <Trash2 /> Delete draft
+                      </DropdownMenuItem>
+                    }
+                    title="Delete this draft job?"
+                    description="This can't be undone. Published jobs can't be deleted."
+                    confirmLabel="Delete"
+                    destructive
+                    onConfirm={removeDraft}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </>
+        }
+      />
 
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">{job.title}</h1>
-          <p className="muted mt-1 text-xs">
-            {job.status === "PUBLISHED"
-              ? `configuration frozen at pipeline v${job.pipelineVersion?.version ?? "?"} — later edits to the template cannot change this job`
-              : job.pipeline
-                ? `draft using template “${job.pipeline.name}” — publishing freezes it`
-                : "no pipeline attached yet"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={
-              job.status === "PUBLISHED"
-                ? "chip chip-pass"
-                : job.status === "CLOSED"
-                  ? "chip chip-fail"
-                  : "chip"
-            }
-          >
-            {job.status}
-          </span>
-          {job.status === "DRAFT" && (
-            <button
-              onClick={publish}
-              disabled={busy}
-              className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-60"
-            >
-              {busy ? "Publishing…" : "Publish job"}
-            </button>
-          )}
-        </div>
-      </header>
-
-      {error && <p className="mt-3 text-xs text-[var(--danger)]">{error}</p>}
-
-      {job.status === "DRAFT" && (
-        <div className="panel mt-4 border-[var(--warning)] p-3 text-xs">
-          Publishing freezes the pipeline into an immutable snapshot for this job —
-          later edits to the pipeline template will not affect it.
-        </div>
+      {isDraft && !pipeline && (
+        <Alert
+          variant="warning"
+          title="Attach an interview pipeline before publishing"
+          className="mb-6"
+          action={
+            <Button size="sm" variant="secondary" onClick={() => setTab("settings")}>
+              Choose pipeline
+            </Button>
+          }
+        >
+          The pipeline defines the questions the AI asks and the rubric it scores against.
+        </Alert>
+      )}
+      {isDraft && pipeline && (
+        <Alert title="Draft — publish to start inviting candidates" className="mb-6">
+          Publishing freezes the pipeline into an immutable snapshot for this job.
+        </Alert>
       )}
 
-      <section className="panel mt-5 p-4">
-        <h2 className="text-sm font-medium">Invite a candidate</h2>
-        <p className="muted mt-1 text-xs">
-          No candidate account is needed — the link below is their interview.
-        </p>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="candidates">
+            Candidates
+            <span className="tabular rounded-sm bg-surface-2 px-1.5 text-xs text-muted-fg">{applications.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
 
-        <form onSubmit={inviteCandidate} className="mt-3 flex flex-wrap gap-2">
-          <input
-            required
-            value={invite.firstName}
-            onChange={(e) => setInvite({ ...invite, firstName: e.target.value })}
-            placeholder="First name"
-            className="panel-2 w-40 px-3 py-2 text-sm outline-none"
-          />
-          <input
-            required
-            value={invite.lastName}
-            onChange={(e) => setInvite({ ...invite, lastName: e.target.value })}
-            placeholder="Last name"
-            className="panel-2 w-40 px-3 py-2 text-sm outline-none"
-          />
-          <input
-            required
-            type="email"
-            value={invite.email}
-            onChange={(e) => setInvite({ ...invite, email: e.target.value })}
-            placeholder="candidate@email.com"
-            className="panel-2 min-w-56 flex-1 px-3 py-2 text-sm outline-none"
-          />
-          <button
-            type="submit"
-            disabled={busy || job.status !== "PUBLISHED"}
-            className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-50"
-          >
-            {busy ? "Inviting…" : "Invite"}
-          </button>
-        </form>
-
-        {job.status !== "PUBLISHED" && (
-          <p className="muted mt-2 text-[11px]">
-            Publish the job before inviting candidates.
-          </p>
-        )}
-
-        {inviteLink && (
-          <div className="panel-2 mt-3 p-3 text-xs">
-            <p className="font-medium">Interview link created</p>
-            <a
-              href={inviteLink}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 block break-all text-[var(--primary)] hover:underline"
-            >
-              {inviteLink}
-            </a>
-            <p className="muted mt-1 text-[11px]">
-              Candidates open this — no account required.
-            </p>
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Invited" value={count("INVITED")} />
+            <StatCard label="In progress" value={count("STARTED", "IN_PROGRESS")} tone="ai" />
+            <StatCard label="Awaiting decision" value={count("COMPLETED")} tone="warning" />
+            <StatCard label="Decided" value={count("DECIDED")} tone="success" />
           </div>
-        )}
-      </section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Workflow className="size-4 text-muted-fg" aria-hidden /> Interview pipeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pipeline ? (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium text-fg">{pipeline.name}</p>
+                    <p className="text-sm text-muted-fg">
+                      {job.pipelineVersion
+                        ? `Version ${job.pipelineVersion.version} is frozen for this job${job.pipelineVersion.publishedAt ? ` since ${formatDate(job.pipelineVersion.publishedAt)}` : ""}.`
+                        : "The latest published version is frozen when you publish this job."}
+                    </p>
+                  </div>
+                  <Button variant="secondary" size="sm" asChild>
+                    <Link href={`/pipelines/${pipeline.id}`}>
+                      Open pipeline <ArrowRight />
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-fg">No pipeline attached yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <section className="panel mt-5 overflow-hidden">
-        <div className="border-b border-[var(--border)] px-4 py-2.5 text-sm font-medium">
-          Applications ({apps.length})
+        <TabsContent value="candidates">
+          <CandidatesTable
+            applications={applications}
+            empty={
+              <EmptyState
+                icon={Users}
+                title="No candidates yet"
+                description={
+                  isPublished
+                    ? "Invite a candidate to send them their interview link."
+                    : "Publish this job, then invite candidates."
+                }
+                action={
+                  isPublished ? (
+                    <InviteCandidateSheet jobId={job.id} jobTitle={job.title} trigger={inviteButton} onInvited={refresh} />
+                  ) : undefined
+                }
+              />
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <JobSettings job={job} pipelines={data.pipelines} onSaved={refresh} />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+}
+
+function CandidatesTable({ applications, empty }: { applications: Application[]; empty: ReactNode }) {
+  const columns: Column<Application>[] = [
+    {
+      key: "name",
+      header: "Candidate",
+      sortValue: (a) => fullName(a.candidate).toLowerCase(),
+      cell: (a) => (
+        <div className="min-w-0">
+          <Link data-row-link href={`/applications/${a.id}`} className="font-medium text-fg hover:text-primary">
+            {fullName(a.candidate)}
+          </Link>
+          <p className="truncate text-[13px] text-muted-fg">{a.candidate.email}</p>
         </div>
-        {apps.length === 0 ? (
-          <p className="muted p-4 text-sm">No candidates invited yet.</p>
-        ) : (
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Candidate</th>
-                <th>Status</th>
-                <th>Invited</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {apps.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    {a.candidate.firstName} {a.candidate.lastName}
-                    <div className="muted text-xs">{a.candidate.email}</div>
-                  </td>
-                  <td>
-                    <span className="chip">{a.status}</span>
-                  </td>
-                  <td className="muted text-xs">
-                    {new Date(a.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="text-right">
-                    <a
-                      href={`/applications/${a.id}`}
-                      className="text-xs text-[var(--primary)] hover:underline"
-                    >
-                      Review →
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      ),
+    },
+    { key: "status", header: "Status", sortValue: (a) => a.status, cell: (a) => <StatusPill status={a.status} /> },
+    {
+      key: "invited",
+      header: "Invited",
+      hideBelow: "md",
+      sortValue: (a) => a.createdAt,
+      cell: (a) => <span className="text-muted-fg">{formatDateTime(a.createdAt)}</span>,
+    },
+    {
+      key: "link",
+      header: <span className="sr-only">Interview link</span>,
+      align: "right",
+      cell: (a) => (
+        <CopyIconButton text={interviewLink(a.inviteToken)} label={`Copy interview link for ${fullName(a.candidate)}`} />
+      ),
+    },
+  ];
+  return (
+    <DataTable
+      label="Candidates for this job"
+      columns={columns}
+      rows={applications}
+      getRowId={(a) => a.id}
+      rowLinks
+      initialSort={{ key: "invited", dir: "desc" }}
+      empty={empty}
+    />
+  );
+}
+
+function JobSettings({ job, pipelines, onSaved }: { job: Job; pipelines: PipelineSummary[]; onSaved: () => Promise<void> }) {
+  const editable = job.status === "DRAFT";
+  const [pipelineId, setPipelineId] = useState(job.pipeline?.id ?? job.pipelineId ?? "");
+  const [busy, setBusy] = useState(false);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setBusy(true);
+    try {
+      await apiFetch(`/job-postings/${job.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: String(form.get("title")).trim(),
+          description: String(form.get("description") ?? "").trim(),
+          ...(pipelineId ? { pipelineId } : {}),
+        }),
+      });
+      toast.success("Job updated");
+      await onSaved();
+    } catch (e) {
+      toast.error("Couldn't save", errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="max-w-2xl">
+      <CardContent className="p-6">
+        {!editable && (
+          <Alert title="Published jobs are read-only" className="mb-5">
+            Their configuration is frozen so every candidate gets the same interview.
+          </Alert>
         )}
-      </section>
+        <form onSubmit={save} className="space-y-4">
+          <Field label="Job title" required>
+            <Input name="title" defaultValue={job.title} required disabled={!editable} />
+          </Field>
+          <Field label="Description">
+            <Textarea name="description" defaultValue={job.description ?? ""} rows={4} disabled={!editable} />
+          </Field>
+          <Field label="Interview pipeline">
+            <Select
+              value={pipelineId}
+              onValueChange={setPipelineId}
+              placeholder="Choose a pipeline"
+              disabled={!editable}
+              options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
+            />
+          </Field>
+          {editable && (
+            <div className="flex justify-end">
+              <Button type="submit" loading={busy}>
+                Save changes
+              </Button>
+            </div>
+          )}
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DetailSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-8 w-72" />
+        <Skeleton className="h-4 w-96 max-w-full" />
+      </div>
+      <Skeleton className="h-10 w-80" />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-24" />
+        ))}
+      </div>
     </div>
   );
 }
