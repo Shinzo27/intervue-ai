@@ -1,132 +1,122 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowRight, Lock, Plus, Workflow } from "lucide-react";
+import { Alert } from "@repo/ui/alert";
+import { Badge } from "@repo/ui/badge";
+import { Button } from "@repo/ui/button";
+import { Card } from "@repo/ui/card";
+import { EmptyState } from "@repo/ui/empty-state";
+import { PageHeader } from "@repo/ui/page-header";
+import { Skeleton } from "@repo/ui/skeleton";
+import { CreatePipelineDialog } from "@/components/pipelines/create-pipeline-dialog";
 import { apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import type { PipelineSummary, PipelineVersion } from "@/lib/types";
+import { useResource } from "@/lib/use-resource";
 
-interface Pipeline {
-  id: string;
-  name: string;
-  createdAt: string;
-  versions?: { id: string; version: number; publishedAt: string | null }[];
+interface PipelineCardData {
+  pipeline: PipelineSummary;
+  latest: PipelineVersion | undefined;
+  jobs: number;
+}
+
+async function loadPipelines(): Promise<PipelineCardData[]> {
+  const pipelines = await apiFetch<PipelineSummary[]>("/pipelines");
+  // The list returns pipeline rows only; versions carry the counts we show.
+  const versions = await Promise.all(
+    pipelines.map((p) => apiFetch<PipelineVersion[]>(`/pipelines/${p.id}/versions`).catch(() => [])),
+  );
+  return pipelines.map((pipeline, index) => {
+    const list = versions[index] ?? [];
+    return { pipeline, latest: list[0], jobs: list.reduce((n, v) => n + v.jobCount, 0) };
+  });
 }
 
 export default function PipelinesPage() {
-  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [newName, setNewName] = useState("");
-  const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    apiFetch<Pipeline[]>("/pipelines")
-      .then(setPipelines)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, error, loading } = useResource("pipelines", loadPipelines);
+  // ?new=1 (from the dashboard and onboarding) opens the create dialog.
+  const [creating, setCreating] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("new"),
+  );
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <h1 className="text-xl font-semibold">Pipelines</h1>
-      <p className="muted mt-1 text-sm">
-        Reusable interview templates. Publishing a version freezes it for the jobs
-        that use it (draft template ≠ published snapshot).
-      </p>
+    <>
+      <PageHeader
+        title="Pipelines"
+        description="Reusable interviews. Edit the draft freely; publishing creates an immutable version that jobs pin to."
+        actions={
+          <Button onClick={() => setCreating(true)}>
+            <Plus /> New pipeline
+          </Button>
+        }
+      />
 
-      <div className="panel mt-4 flex items-center gap-2 p-3">
-        <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="New pipeline name…"
-          className="panel-2 flex-1 px-3 py-2 text-sm outline-none"
-        />
-        <button
-          disabled={creating || !newName.trim()}
-          onClick={async () => {
-            setCreating(true);
-            try {
-              const created = await apiFetch<{ id: string }>("/pipelines", {
-                method: "POST",
-                body: JSON.stringify({ name: newName.trim() }),
-              });
-              window.location.href = `/pipelines/${created.id}`;
-            } catch (e) {
-              setError(e instanceof Error ? e.message : "Could not create pipeline");
-              setCreating(false);
-            }
-          }}
-          className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-50"
-        >
-          {creating ? "Creating…" : "New pipeline"}
-        </button>
-      </div>
+      {error && <Alert variant="danger" title="Couldn't load pipelines" className="mb-6">{error}</Alert>}
 
-      {error && (
-        <div className="panel mt-5 border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
-          {error}
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-44" />
+          ))}
         </div>
+      ) : !data?.length ? (
+        <EmptyState
+          icon={Workflow}
+          title="No pipelines yet"
+          description="A pipeline holds the stages, questions and rubric the AI interviewer uses. Build one, publish it, then attach it to a job."
+          action={
+            <Button onClick={() => setCreating(true)}>
+              <Plus /> New pipeline
+            </Button>
+          }
+        />
+      ) : (
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {data.map(({ pipeline, latest, jobs }) => (
+            <li key={pipeline.id}>
+              <Card className="group relative flex h-full flex-col p-5 transition-[border-color,box-shadow] duration-150 hover:border-border-strong hover:shadow-md">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-subtle text-primary">
+                    <Workflow className="size-5" aria-hidden />
+                  </span>
+                  {latest ? (
+                    <Badge variant="success" dot>
+                      v{latest.version} published
+                    </Badge>
+                  ) : (
+                    <Badge>Draft only</Badge>
+                  )}
+                </div>
+                <Link
+                  href={`/pipelines/${pipeline.id}`}
+                  className="mt-4 text-base font-semibold text-fg after:absolute after:inset-0 group-hover:text-primary"
+                >
+                  {pipeline.name}
+                </Link>
+                <p className="mb-5 mt-1 text-sm text-muted-fg">
+                  {latest
+                    ? `${latest.stageCount} stages · ${latest.questionCount} questions in v${latest.version}`
+                    : "Not published yet"}
+                </p>
+                <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4 text-[13px] text-muted-fg">
+                  <span className="flex items-center gap-1.5">
+                    <Lock className="size-3.5" aria-hidden />
+                    {jobs} {jobs === 1 ? "job pinned" : "jobs pinned"}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    Created {formatDate(pipeline.createdAt)}
+                    <ArrowRight className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                  </span>
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ul>
       )}
 
-      <section className="panel mt-5 overflow-hidden">
-        {loading ? (
-          <p className="muted p-4 text-sm">Loading…</p>
-        ) : pipelines.length === 0 ? (
-          <p className="muted p-4 text-sm">No pipelines yet.</p>
-        ) : (
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Versions</th>
-                <th>Latest published</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pipelines.map((p) => {
-                const versions = p.versions;
-                const published = (versions ?? [])
-                  .filter((v) => v.publishedAt)
-                  .sort((a, b) => b.version - a.version)[0];
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <a
-                        href={`/pipelines/${p.id}`}
-                        className="font-medium hover:text-[var(--primary)] hover:underline"
-                      >
-                        {p.name}
-                      </a>
-                    </td>
-                    <td className="muted text-xs">{versions ? versions.length : "—"}</td>
-                    <td>
-                      {!versions ? (
-                        <a
-                          href={`/pipelines/${p.id}`}
-                          className="chip hover:border-[var(--primary)]"
-                        >
-                          open builder
-                        </a>
-                      ) : published ? (
-                        <span className="chip chip-pass">v{published.version}</span>
-                      ) : (
-                        <span className="chip">draft only</span>
-                      )}
-                    </td>
-                    <td className="muted text-xs">
-                      {new Date(p.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <p className="muted mt-4 text-xs">
-        This list loads pipeline rows only; version history and published snapshots are
-        on each pipeline's builder page.
-      </p>
-    </div>
+      <CreatePipelineDialog open={creating} onOpenChange={setCreating} />
+    </>
   );
 }
