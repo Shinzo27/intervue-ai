@@ -99,7 +99,7 @@ export function Field({
     >
       <div className={cn("flex flex-col gap-1.5", className)}>
         {inline ? (
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-start gap-2.5 [&>button:first-child]:mt-px">
             {children}
             {labelNode}
           </div>
