@@ -1,10 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { apiFetch } from "@/lib/api";
+import { AlertTriangle, CheckCircle2, MessageSquareText, Scale, UserCheck, XCircle } from "lucide-react";
+import { AINote, DisagreementBadge, ModelComparison, type ModelRun } from "@repo/ui/ai";
+import { Alert } from "@repo/ui/alert";
+import { Badge } from "@repo/ui/badge";
+import { Button } from "@repo/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
+import { ChatBubble } from "@repo/ui/chat";
+import { ConfirmDialog } from "@repo/ui/confirm-dialog";
+import { EmptyState } from "@repo/ui/empty-state";
+import { Field } from "@repo/ui/field";
+import { Textarea } from "@repo/ui/input";
+import { PageHeader } from "@repo/ui/page-header";
+import { ScoreBar, ScoreRing } from "@repo/ui/score";
+import { Skeleton } from "@repo/ui/skeleton";
+import { StatusPill } from "@repo/ui/status-pill";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { toast } from "@repo/ui/toast";
+import { apiFetch, ApiError } from "@/lib/api";
+import { errorMessage, formatDateTime, fullName } from "@/lib/format";
 import { useResource } from "@/lib/use-resource";
+
+/** Above this gap (percentage points) the two models are treated as disagreeing — matches the backend rule. */
+const DISAGREEMENT_THRESHOLD = 20;
 
 interface Criterion {
   name: string;
@@ -19,12 +40,7 @@ interface Question {
   question: string;
   type: string;
   answer: { id: string; type: string; content: string; submittedAt: string } | null;
-  score: {
-    overallScore: number;
-    maxScore: number;
-    reasoning: string | null;
-    criteria: Criterion[];
-  } | null;
+  score: { overallScore: number; maxScore: number; reasoning: string | null; criteria: Criterion[] } | null;
 }
 
 interface Stage {
@@ -45,6 +61,21 @@ interface Evaluation {
   createdAt: string;
 }
 
+interface Decision {
+  outcome: "PASS" | "FAIL";
+  totalScore: number;
+  maxScore: number;
+  reasoning: string | null;
+  decidedAt: string;
+  overrides: {
+    previousOutcome: string;
+    newOutcome: string;
+    reason: string;
+    createdAt: string;
+    overriddenBy: { name: string; email: string };
+  }[];
+}
+
 interface Review {
   application: { id: string; status: string; completedAt: string | null };
   candidate: { firstName: string; lastName: string; email: string };
@@ -52,384 +83,425 @@ interface Review {
   interview: { id: string; status: string } | null;
   stages: Stage[];
   evaluations: Evaluation[];
-  decision: {
-    outcome: string;
-    totalScore: number;
-    maxScore: number;
-    reasoning: string | null;
-    decidedAt: string;
-    overrides: {
-      previousOutcome: string;
-      newOutcome: string;
-      reason: string;
-      createdAt: string;
-      overriddenBy: { name: string; email: string };
-    }[];
-  } | null;
+  decision: Decision | null;
   totals: { totalScore: number; maxScore: number; percentage: number };
 }
 
+interface Conversation {
+  messages: { id: string; role: string; content: string; createdAt: string }[];
+}
+
+function runsFor(review: Review, answerId: string): ModelRun[] {
+  return review.evaluations
+    .filter((e) => e.answerId === answerId)
+    .map((e) => ({
+      id: e.id,
+      model: e.model ?? "unknown model",
+      status: e.status,
+      score: e.score === null ? null : Number(e.score),
+      reasoning: e.reasoning,
+    }));
+}
+
+function disagrees(runs: ModelRun[], max: number): boolean {
+  const percents = runs
+    .filter((r) => r.status === "COMPLETED" && r.score !== null)
+    .map((r) => (max > 0 ? ((r.score as number) / max) * 100 : 0));
+  return percents.length > 1 && Math.max(...percents) - Math.min(...percents) > DISAGREEMENT_THRESHOLD;
+}
+
 export default function ApplicationReviewPage() {
-  const params = useParams<{ id: string }>();
-  const { data: review, error, loading, refresh: load } = useResource(params.id ?? null, () =>
-    apiFetch<Review>(`/applications/${params.id}/review`),
+  const id = useParams<{ id: string }>()?.id ?? null;
+  const { data: review, error, loading, refresh } = useResource(id, () =>
+    apiFetch<Review>(`/applications/${id}/review`),
   );
 
-  if (loading) return <p className="muted text-sm">Loading review…</p>;
-  if (error)
+  if (loading) return <ReviewSkeleton />;
+  if (!review) {
     return (
-      <div className="panel border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
-        {error}
-      </div>
+      <EmptyState
+        title="Couldn't open this application"
+        description={error ?? "It may belong to another organization."}
+        action={
+          <Button variant="secondary" asChild>
+            <Link href="/applications">Back to applications</Link>
+          </Button>
+        }
+      />
     );
-  if (!review) return null;
+  }
 
-  const pct = review.totals.percentage;
-  const failedModels = review.evaluations.filter((e) => e.status === "FAILED");
-  // A question can have an answer but no score (no rubric on the pinned snapshot) —
-  // in that case `totals` only covers what could be scored, so say so instead of
-  // letting a bare "100%" read as a perfect interview.
-  const allQuestions = review.stages.flatMap((s) => s.questions);
-  const unscored = allQuestions.filter((q) => q.answer && !q.score).length;
-  const unanswered = allQuestions.filter((q) => !q.answer).length;
-  const partial = unscored > 0 || unanswered > 0;
+  const questions = review.stages.flatMap((s) => s.questions);
+  const unscored = questions.filter((q) => q.answer && !q.score).length;
+  const unanswered = questions.filter((q) => !q.answer).length;
+  const failedRuns = review.evaluations.filter((e) => e.status === "FAILED").length;
+  const disputed = questions.filter(
+    (q) => q.answer && q.score && disagrees(runsFor(review, q.answer.id), q.score.maxScore),
+  ).length;
+  const name = fullName(review.candidate);
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <Link href="/applications" className="muted text-xs hover:underline">
-        ← Applications
-      </Link>
+    <>
+      <PageHeader
+        eyebrow={
+          <>
+            {/* POST /interviews/:id/decision leaves the application COMPLETED (bug list #9), so derive it. */}
+            <StatusPill status={review.decision ? "DECIDED" : review.application.status} />
+            {review.interview && <Badge variant="outline">Interview {review.interview.status.toLowerCase().replace("_", " ")}</Badge>}
+          </>
+        }
+        title={name}
+        description={`${review.jobPosting.title} · ${review.candidate.email}`}
+      />
 
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">
-            {review.candidate.firstName} {review.candidate.lastName}
-          </h1>
-          <p className="muted mt-1 text-sm">
-            {review.jobPosting.title} · {review.candidate.email}
-          </p>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="order-2 min-w-0 lg:order-1">
+          <Tabs defaultValue="answers">
+            <TabsList>
+              <TabsTrigger value="answers">
+                <Scale /> Answers &amp; scores
+              </TabsTrigger>
+              <TabsTrigger value="conversation">
+                <MessageSquareText /> Conversation
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="answers" className="space-y-6">
+              {review.stages.length === 0 ? (
+                <EmptyState title="No interview yet" description="Answers and scores appear once the candidate starts." />
+              ) : (
+                review.stages.map((stage) => <StageSection key={stage.id} stage={stage} review={review} />)
+              )}
+            </TabsContent>
+            <TabsContent value="conversation">
+              {review.interview ? (
+                <ConversationView interviewId={review.interview.id} candidateName={name} />
+              ) : (
+                <EmptyState title="No conversation yet" description="The transcript appears once the candidate starts." />
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="chip">{review.application.status}</span>
-          {review.interview && (
-            <span
-              className={
-                review.interview.status === "COMPLETED" ? "chip chip-pass" : "chip chip-warn"
-              }
-            >
-              interview {review.interview.status}
-            </span>
-          )}
-          <span className="chip">
-            score {review.totals.totalScore}/{review.totals.maxScore} · {pct}%
-            {partial ? " of scored" : ""}
-          </span>
-          {unscored > 0 && (
-            <span className="chip chip-warn">
-              {unscored} question{unscored > 1 ? "s" : ""} unscored
-            </span>
-          )}
-          {unanswered > 0 && (
-            <span className="chip chip-warn">
-              {unanswered} unanswered
-            </span>
-          )}
-          {failedModels.length > 0 && (
-            <span className="chip chip-warn">
-              {failedModels.length} model run{failedModels.length > 1 ? "s" : ""} failed
-            </span>
-          )}
-        </div>
-      </header>
 
-      <DecisionPanel review={review} onChanged={load} />
-      <ModelPanel evaluations={review.evaluations} />
-
-      <section className="mt-6 space-y-4">
-        {review.stages.map((stage) => (
-          <StageCard key={stage.id} stage={stage} />
-        ))}
-      </section>
-    </div>
-  );
-}
-
-function StageCard({ stage }: { stage: Stage }) {
-  return (
-    <div className="panel overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-        <span className="text-sm font-medium">
-          Stage {stage.order} · {stage.name}
-        </span>
-        <span className={stage.status === "COMPLETED" ? "chip chip-pass" : "chip"}>
-          {stage.status}
-        </span>
-      </div>
-      <div className="divide-y divide-[var(--border)]">
-        {stage.questions.map((q) => (
-          <QuestionRow key={q.questionVersionId} q={q} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function QuestionRow({ q }: { q: Question }) {
-  const score = q.score;
-  const pctScore = score && score.maxScore > 0 ? (score.overallScore / score.maxScore) * 100 : 0;
-
-  return (
-    <div className="p-4">
-      <div className="flex items-start justify-between gap-4">
-        <p className="text-sm font-medium">
-          Q{q.order}. {q.question}
-        </p>
-        {score ? (
-          <span className={pctScore >= 70 ? "chip chip-pass" : "chip chip-warn"}>
-            {score.overallScore}/{score.maxScore}
-          </span>
-        ) : (
-          <span className="chip">unscored</span>
-        )}
-      </div>
-
-      <div className="panel-2 mt-3 p-3">
-        <div className="muted mb-1 text-[11px] uppercase tracking-wide">Answer</div>
-        <p className="text-sm whitespace-pre-wrap">
-          {q.answer?.content?.trim() ? q.answer.content : <em className="muted">no answer recorded</em>}
-        </p>
-      </div>
-
-      {score && (
-        <div className="mt-3 space-y-2">
-          {score.criteria.length === 0 ? (
-            <p className="muted text-xs">
-              No criterion breakdown stored for this score.
-            </p>
-          ) : (
-            score.criteria.map((c) => {
-              const pct = c.maxScore > 0 ? (c.score / c.maxScore) * 100 : 0;
-              return (
-                <div key={c.name}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span>{c.name}</span>
-                    <span className="muted">
-                      {c.score}/{c.maxScore}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--surface-2)]">
-                    <div
-                      className="h-1.5 rounded-full"
-                      style={{
-                        width: `${Math.max(2, Math.min(100, pct))}%`,
-                        background: pct >= 70 ? "var(--success)" : "var(--warning)",
-                      }}
-                    />
-                  </div>
-                  {c.reasoning && (
-                    <p className="muted mt-1 text-[11px] leading-relaxed">{c.reasoning}</p>
-                  )}
+        <aside className="order-1 space-y-4 lg:sticky lg:top-20 lg:order-2">
+          <Card>
+            <CardContent className="flex items-center gap-5 p-5">
+              <ScoreRing percent={review.totals.percentage} />
+              <div className="min-w-0 space-y-1.5">
+                <p className="tabular text-sm text-fg">
+                  <span className="text-lg font-semibold">{review.totals.totalScore}</span> / {review.totals.maxScore} points
+                </p>
+                {(unscored > 0 || unanswered > 0) && (
+                  <p className="text-[13px] text-muted-fg">Of scored questions only</p>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {unscored > 0 && <Badge variant="warning">{unscored} unscored</Badge>}
+                  {unanswered > 0 && <Badge>{unanswered} unanswered</Badge>}
+                  {disputed > 0 && <DisagreementBadge />}
+                  {failedRuns > 0 && <Badge variant="danger">{failedRuns} model run{failedRuns > 1 ? "s" : ""} failed</Badge>}
                 </div>
-              );
-            })
-          )}
-          {score.reasoning && (
-            <p className="muted text-xs leading-relaxed">{score.reasoning}</p>
-          )}
-        </div>
-      )}
-    </div>
+              </div>
+            </CardContent>
+          </Card>
+          <DecisionCard review={review} onChanged={refresh} />
+        </aside>
+      </div>
+    </>
   );
 }
 
-/** Two-model panel: every AI evaluation run for this interview. */
-function ModelPanel({ evaluations }: { evaluations: Evaluation[] }) {
-  const scores = evaluations
-    .filter((e) => e.status === "COMPLETED")
-    .map((e) => Number(e.score ?? 0));
-  const gap =
-    scores.length > 1 ? Math.abs(Math.max(...scores) - Math.min(...scores)) : null;
-
+function StageSection({ stage, review }: { stage: Stage; review: Review }) {
   return (
-    <section className="panel mt-6 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-        <span className="text-sm font-medium">AI evaluations (two-model panel)</span>
-        {gap === null ? (
-          <span className="chip">single model</span>
-        ) : (
-          <span className={gap > 2 ? "chip chip-warn" : "chip chip-pass"}>
-            Δ {gap} pts between models
-          </span>
-        )}
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-semibold">
+          <span className="tabular text-muted-fg">Stage {stage.order}</span> · {stage.name}
+        </h2>
+        <StageStatus status={stage.status} />
       </div>
-
-      {evaluations.length === 0 ? (
-        <p className="muted p-4 text-sm">No evaluations recorded for this interview.</p>
-      ) : (
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Model</th>
-              <th>Status</th>
-              <th>Score</th>
-              <th>Reasoning</th>
-            </tr>
-          </thead>
-          <tbody>
-            {evaluations.map((e) => (
-              <tr key={e.id}>
-                <td className="text-xs">{e.model ?? "—"}</td>
-                <td>
-                  <span
-                    className={
-                      e.status === "COMPLETED"
-                        ? "chip chip-pass"
-                        : e.status === "FAILED"
-                          ? "chip chip-fail"
-                          : "chip chip-warn"
-                    }
-                  >
-                    {e.status}
-                  </span>
-                </td>
-                <td className="text-xs">{e.score === null ? "—" : String(e.score)}</td>
-                <td className="muted max-w-md text-xs">{(e.reasoning ?? "").slice(0, 160)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {stage.questions.map((question) => (
+        <QuestionReview key={question.questionVersionId} question={question} review={review} />
+      ))}
     </section>
   );
 }
 
-/** Decision + human override (reason required, history preserved). */
-function DecisionPanel({ review, onChanged }: { review: Review; onChanged: () => void }) {
+/** Stage statuses read differently from application statuses (COMPLETED ≠ awaiting decision). */
+function StageStatus({ status }: { status: string }) {
+  if (status === "COMPLETED") return <Badge variant="success" dot>Completed</Badge>;
+  if (status === "IN_PROGRESS" || status === "STARTED") return <Badge variant="primary" dot>In progress</Badge>;
+  return <Badge dot>Not started</Badge>;
+}
+
+function QuestionReview({ question, review }: { question: Question; review: Review }) {
+  const { answer, score } = question;
+  const runs = answer ? runsFor(review, answer.id) : [];
+
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <p className="font-medium leading-6 text-fg">
+            <span className="tabular mr-2 text-muted-fg">Q{question.order}</span>
+            {question.question}
+          </p>
+          {score ? (
+            <span className="tabular shrink-0 font-mono text-sm font-semibold text-fg">
+              {score.overallScore}/{score.maxScore}
+            </span>
+          ) : (
+            <Badge variant={answer ? "warning" : "neutral"}>{answer ? "Not scored" : "Unanswered"}</Badge>
+          )}
+        </div>
+
+        <blockquote className="rounded-md border-l-2 border-border-strong bg-surface-2 px-4 py-3 text-[15px] leading-6 text-fg">
+          {answer?.content?.trim() ? (
+            <span className="whitespace-pre-wrap">{answer.content}</span>
+          ) : (
+            <span className="italic text-muted-fg">No answer recorded.</span>
+          )}
+        </blockquote>
+
+        {answer && !score && (
+          <p className="flex items-center gap-1.5 text-[13px] text-warning">
+            <AlertTriangle className="size-3.5" aria-hidden /> This question had no rubric in the pinned version, so it wasn&apos;t scored.
+          </p>
+        )}
+
+        {score && (
+          <div className="space-y-4">
+            <ScoreBar label="Question score" score={score.overallScore} max={score.maxScore} showBand />
+            {score.criteria.length > 0 && (
+              <div className="space-y-3 border-l-2 border-border pl-4">
+                {score.criteria.map((criterion) => (
+                  <div key={criterion.name} className="space-y-1">
+                    <ScoreBar label={criterion.name} score={criterion.score} max={criterion.maxScore} />
+                    {criterion.reasoning && <p className="text-[13px] leading-5 text-muted-fg">{criterion.reasoning}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {score.reasoning && <AINote>{score.reasoning}</AINote>}
+          </div>
+        )}
+
+        {runs.length > 0 && score && (
+          <ModelComparison runs={runs} max={score.maxScore} threshold={DISAGREEMENT_THRESHOLD} className="border-t border-border pt-4" />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConversationView({ interviewId, candidateName }: { interviewId: string; candidateName: string }) {
+  const { data, error, loading } = useResource(`conversation:${interviewId}`, () =>
+    apiFetch<Conversation>(`/interviews/${interviewId}/conversation`).catch((e) => {
+      if (e instanceof ApiError && e.status === 404) return { messages: [] };
+      throw e;
+    }),
+  );
+
+  if (loading) return <Skeleton className="h-64" />;
+  if (error) return <Alert variant="danger" title="Couldn't load the conversation">{error}</Alert>;
+  const messages = (data?.messages ?? []).filter((m) => m.role !== "SYSTEM");
+  if (messages.length === 0) {
+    return <EmptyState icon={MessageSquareText} title="No messages recorded" description="This interview has no conversation transcript." />;
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-5">
+        {messages.map((message) => (
+          <ChatBubble
+            key={message.id}
+            role={message.role === "ASSISTANT" ? "ai" : "candidate"}
+            author={message.role === "ASSISTANT" ? "AI interviewer" : candidateName}
+          >
+            {message.content}
+          </ChatBubble>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DecisionCard({ review, onChanged }: { review: Review; onChanged: () => Promise<void> }) {
+  const { decision, interview } = review;
+  const complete = interview?.status === "COMPLETED";
+
+  async function record(outcome: "PASS" | "FAIL") {
+    if (!interview) return;
+    try {
+      await apiFetch(`/interviews/${interview.id}/decision`, { method: "POST", body: JSON.stringify({ outcome }) });
+      toast.success(`Decision recorded: ${outcome === "PASS" ? "Pass" : "Fail"}`);
+      await onChanged();
+    } catch (e) {
+      toast.error("Couldn't record the decision", errorMessage(e));
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Decision</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-0">
+        {decision ? (
+          <>
+            <div
+              className={`flex items-center gap-3 rounded-lg p-3 ${decision.outcome === "PASS" ? "bg-success-subtle" : "bg-danger-subtle"}`}
+            >
+              {decision.outcome === "PASS" ? (
+                <CheckCircle2 className="size-6 text-success" aria-hidden />
+              ) : (
+                <XCircle className="size-6 text-danger" aria-hidden />
+              )}
+              <div>
+                <p className="font-semibold text-fg">{decision.outcome === "PASS" ? "Pass" : "Fail"}</p>
+                <p className="tabular text-xs text-muted-fg">
+                  {decision.totalScore}/{decision.maxScore} points · {formatDateTime(decision.decidedAt)}
+                </p>
+              </div>
+            </div>
+            {decision.reasoning && <p className="text-[13px] leading-5 text-muted-fg">{decision.reasoning}</p>}
+            {decision.overrides.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-fg">Override history</h3>
+                <ol className="space-y-2">
+                  {decision.overrides.map((override, index) => (
+                    <li key={index} className="rounded-md border border-border p-3 text-[13px]">
+                      <p className="flex items-center gap-1.5 font-medium text-fg">
+                        <UserCheck className="size-3.5 text-primary" aria-hidden />
+                        {override.previousOutcome} → {override.newOutcome}
+                      </p>
+                      <p className="mt-1 text-fg">{override.reason}</p>
+                      <p className="mt-1 text-xs text-muted-fg">
+                        {override.overriddenBy?.name || override.overriddenBy?.email} · {formatDateTime(override.createdAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {interview && <OverrideForm interviewId={interview.id} current={decision.outcome} onChanged={onChanged} />}
+          </>
+        ) : complete ? (
+          <>
+            <p className="text-sm text-muted-fg">
+              The interview is complete. The AI records a recommendation once every answer is scored; you can also decide now.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <ConfirmDialog
+                trigger={
+                  <Button variant="secondary">
+                    <CheckCircle2 className="text-success" /> Pass
+                  </Button>
+                }
+                title="Record a Pass?"
+                description="The decision is audited under your name. It can be overridden later with a reason."
+                confirmLabel="Record Pass"
+                onConfirm={() => record("PASS")}
+              />
+              <ConfirmDialog
+                trigger={
+                  <Button variant="secondary">
+                    <XCircle className="text-danger" /> Fail
+                  </Button>
+                }
+                title="Record a Fail?"
+                description="The decision is audited under your name. It can be overridden later with a reason."
+                confirmLabel="Record Fail"
+                destructive
+                onConfirm={() => record("FAIL")}
+              />
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted-fg">A decision can be made once the interview is complete.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function OverrideForm({
+  interviewId,
+  current,
+  onChanged,
+}: {
+  interviewId: string;
+  current: "PASS" | "FAIL";
+  onChanged: () => Promise<void>;
+}) {
+  const next = current === "PASS" ? "FAIL" : "PASS";
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const [outcome, setOutcome] = useState<"PASS" | "FAIL">(
-    review.decision?.outcome === "PASS" ? "FAIL" : "PASS",
-  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const decision = review.decision;
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!review.interview) return;
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (reason.trim().length < 5) {
+      setError("Explain the change in at least a few words. It's stored permanently.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await apiFetch(`/interviews/${review.interview.id}/decision/override`, {
+      await apiFetch(`/interviews/${interviewId}/decision/override`, {
         method: "POST",
-        body: JSON.stringify({ newOutcome: outcome, reason }),
+        body: JSON.stringify({ newOutcome: next, reason: reason.trim() }),
       });
+      toast.success(`Decision changed to ${next === "PASS" ? "Pass" : "Fail"}`, "The previous outcome is kept in the history.");
       setOpen(false);
       setReason("");
-      onChanged();
+      await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Override failed");
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
   }
 
+  if (!open) {
+    return (
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        Override to {next === "PASS" ? "Pass" : "Fail"}
+      </Button>
+    );
+  }
+
   return (
-    <section className="panel mt-6 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-        <span className="text-sm font-medium">Decision</span>
-        {decision ? (
-          <span className={decision.outcome === "PASS" ? "chip chip-pass" : "chip chip-fail"}>
-            {decision.outcome}
-          </span>
-        ) : (
-          <span className="chip">not decided</span>
-        )}
+    <form onSubmit={submit} className="space-y-3 rounded-lg border border-border p-3">
+      <Field label={`Why change to ${next === "PASS" ? "Pass" : "Fail"}?`} required error={error} hint="Stored permanently in the audit trail.">
+        <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
+      </Field>
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" loading={busy} variant={next === "FAIL" ? "destructive" : "primary"}>
+          Confirm override
+        </Button>
       </div>
+    </form>
+  );
+}
 
-      <div className="p-4">
-        {decision ? (
-          <>
-            <p className="text-sm">
-              Total {decision.totalScore}/{decision.maxScore} · decided{" "}
-              {new Date(decision.decidedAt).toLocaleString()}
-            </p>
-            {decision.reasoning && (
-              <p className="muted mt-2 text-xs leading-relaxed">{decision.reasoning}</p>
-            )}
-
-            {decision.overrides.length > 0 && (
-              <div className="mt-4">
-                <div className="muted mb-2 text-[11px] uppercase tracking-wide">
-                  Override history
-                </div>
-                <div className="space-y-2">
-                  {decision.overrides.map((o, i) => (
-                    <div key={i} className="panel-2 p-3 text-xs">
-                      <span className="chip chip-warn">
-                        {o.previousOutcome} → {o.newOutcome}
-                      </span>
-                      <p className="mt-2">{o.reason}</p>
-                      <p className="muted mt-1 text-[11px]">
-                        {o.overriddenBy?.name ?? o.overriddenBy?.email} ·{" "}
-                        {new Date(o.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {review.interview && (
-              <button
-                onClick={() => setOpen((v) => !v)}
-                className="mt-4 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-2)]"
-              >
-                {open ? "Cancel override" : "Override decision"}
-              </button>
-            )}
-
-            {open && (
-              <form onSubmit={submit} className="panel-2 mt-3 space-y-3 p-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="muted">New outcome</span>
-                  <select
-                    value={outcome}
-                    onChange={(e) => setOutcome(e.target.value as "PASS" | "FAIL")}
-                    className="panel px-2 py-1 text-xs"
-                  >
-                    <option value="PASS">PASS</option>
-                    <option value="FAIL">FAIL</option>
-                  </select>
-                </div>
-                <textarea
-                  required
-                  minLength={5}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Why is the AI decision wrong? This is stored permanently."
-                  className="panel w-full px-3 py-2 text-xs"
-                  rows={3}
-                />
-                {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-[var(--on-primary)] disabled:opacity-60"
-                >
-                  {busy ? "Saving…" : "Confirm override"}
-                </button>
-              </form>
-            )}
-          </>
-        ) : (
-          <p className="muted text-sm">
-            No decision yet — the AI creates one from aggregated scores once the
-            interview is complete and every question is scored.
-          </p>
-        )}
+function ReviewSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-8 w-64" />
       </div>
-    </section>
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-72" />
+          <Skeleton className="h-56" />
+          <Skeleton className="h-56" />
+        </div>
+        <Skeleton className="h-80" />
+      </div>
+    </div>
   );
 }
