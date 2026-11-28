@@ -1,0 +1,213 @@
+/*
+ * Intervue AI design tokens — the single source of truth for every app.
+ *
+ * Usage (in an app's globals.css):
+ *   @import "tailwindcss";
+ *   @import "@repo/ui/styles/tokens.css";
+ *
+ * Raw values live on :root (light) and [data-theme="dark"]; components only
+ * ever use the semantic Tailwind utilities generated from @theme below
+ * (bg-surface, text-muted-fg, border-input, bg-ai-subtle, ...), never hex.
+ * See docs/frontend-redesign-plan.md for the contrast ratios of each pair.
+ */
+
+/* Generate utilities for classes used inside the shared components. */
+@source "../";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-hover: #f1f5f9;
+  --fg: #0f172a;
+  --muted-fg: #475569;
+  --subtle-fg: #64748b;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --border-input: #64748b;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --on-primary: #ffffff;
+  --primary-subtle: color-mix(in srgb, #2563eb 10%, transparent);
+
+  --ai: #7c3aed;
+  --ai-subtle: color-mix(in srgb, #7c3aed 10%, transparent);
+  --success: #15803d;
+  --success-subtle: color-mix(in srgb, #15803d 10%, transparent);
+  --warning: #b45309;
+  --warning-subtle: color-mix(in srgb, #b45309 12%, transparent);
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --on-danger: #ffffff;
+  --danger-subtle: color-mix(in srgb, #dc2626 10%, transparent);
+  --accent: #ea580c;
+  --on-accent: #000000;
+
+  --ring: #2563eb;
+  --overlay: rgb(15 23 42 / 0.45);
+
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+  --shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.1), 0 2px 4px -2px rgb(15 23 42 / 0.06);
+  --shadow-lg: 0 16px 40px -8px rgb(15 23 42 / 0.18), 0 4px 8px -4px rgb(15 23 42 / 0.08);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b1120;
+  --surface: #111827;
+  --surface-2: #1a2332;
+  --surface-hover: #1f2937;
+  --fg: #e2e8f0;
+  --muted-fg: #94a3b8;
+  --subtle-fg: #7c8aa0;
+  --border: #1f2937;
+  --border-strong: #334155;
+  --border-input: #64748b;
+
+  --primary: #60a5fa;
+  --primary-hover: #93c5fd;
+  --on-primary: #0b1120;
+  --primary-subtle: color-mix(in srgb, #60a5fa 14%, transparent);
+
+  --ai: #a78bfa;
+  --ai-subtle: color-mix(in srgb, #a78bfa 14%, transparent);
+  --success: #4ade80;
+  --success-subtle: color-mix(in srgb, #4ade80 12%, transparent);
+  --warning: #fbbf24;
+  --warning-subtle: color-mix(in srgb, #fbbf24 12%, transparent);
+  --danger: #f87171;
+  --danger-hover: #fca5a5;
+  --on-danger: #0b1120;
+  --danger-subtle: color-mix(in srgb, #f87171 12%, transparent);
+
+  --ring: #60a5fa;
+  --overlay: rgb(2 6 23 / 0.7);
+
+  /* Dark theme separates layers with lighter surfaces, not shadows. */
+  --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.02);
+  --shadow-md: 0 8px 24px -4px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 20px 48px -8px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-fg: var(--fg);
+  --color-muted-fg: var(--muted-fg);
+  --color-subtle-fg: var(--subtle-fg);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--border-input);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-ai: var(--ai);
+  --color-ai-subtle: var(--ai-subtle);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-on-danger: var(--on-danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-fira), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  --animate-fade-in: fade-in 200ms var(--ease-out);
+  --animate-fade-out: fade-out 140ms var(--ease-in);
+  --animate-pop-in: pop-in 200ms var(--ease-out);
+  --animate-pop-out: pop-out 140ms var(--ease-in);
+  --animate-dialog-in: dialog-in 250ms var(--ease-out);
+  --animate-dialog-out: dialog-out 170ms var(--ease-in);
+  --animate-sheet-in: sheet-in 250ms var(--ease-out);
+  --animate-sheet-out: sheet-out 170ms var(--ease-in);
+  --animate-shimmer: shimmer 1.6s linear infinite;
+}
+
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+@keyframes pop-out { to { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+@keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); } }
+@keyframes dialog-out { to { opacity: 0; transform: translate(-50%, -48%) scale(0.97); } }
+@keyframes sheet-in { from { transform: translateX(100%); } }
+@keyframes sheet-out { to { transform: translateX(100%); } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  ::selection {
+    background: var(--primary-subtle);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

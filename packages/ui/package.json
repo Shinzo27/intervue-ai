@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
+    "./styles/*": "./src/styles/*",
+    "./lib/*": "./src/lib/*.ts",
     "./*": "./src/*.tsx"
   },
   "scripts": {
@@ -20,7 +22,13 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.83.0",
+    "radix-ui": "^1.8.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.7.1"
   }
 }
