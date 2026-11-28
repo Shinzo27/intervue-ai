@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { useResource } from "@/lib/use-resource";
 
 interface Criterion {
   name: string;
@@ -69,24 +71,9 @@ interface Review {
 
 export default function ApplicationReviewPage() {
   const params = useParams<{ id: string }>();
-  const [review, setReview] = useState<Review | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    try {
-      setReview(await apiFetch<Review>(`/applications/${params.id}/review`));
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load review");
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data: review, error, loading, refresh: load } = useResource(params.id ?? null, () =>
+    apiFetch<Review>(`/applications/${params.id}/review`),
+  );
 
   if (loading) return <p className="muted text-sm">Loading review…</p>;
   if (error)
@@ -109,9 +96,9 @@ export default function ApplicationReviewPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <a href="/applications" className="muted text-xs hover:underline">
+      <Link href="/applications" className="muted text-xs hover:underline">
         ← Applications
-      </a>
+      </Link>
 
       <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div>

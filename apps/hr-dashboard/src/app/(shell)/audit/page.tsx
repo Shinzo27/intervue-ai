@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { useResource } from "@/lib/use-resource";
 
 interface AuditEvent {
   id: string;
@@ -18,27 +19,11 @@ interface AuditEvent {
 const FILTERS = ["ALL", "USER", "AI", "SYSTEM"] as const;
 
 export default function AuditPage() {
-  const [events, setEvents] = useState<AuditEvent[]>([]);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("ALL");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const query = filter === "ALL" ? "" : `&actorType=${filter}`;
-      setEvents(await apiFetch<AuditEvent[]>(`/audit?limit=100${query}`));
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load audit history");
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const query = filter === "ALL" ? "" : `&actorType=${filter}`;
+  const { data: events = [], error, loading } = useResource(`audit${query}`, () =>
+    apiFetch<AuditEvent[]>(`/audit?limit=100${query}`),
+  );
 
   return (
     <div className="mx-auto max-w-5xl">
