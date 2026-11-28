@@ -33,9 +33,10 @@ function readPreference(): ThemePreference {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark" || stored === "system") return stored;
   } catch {
-    // Storage can be blocked (private mode); fall back to the system theme.
+    // Storage can be blocked (private mode); fall back to the default.
   }
-  return "system";
+  // Light is the product default; "system" is an explicit opt-in.
+  return "light";
 }
 
 /**
@@ -43,12 +44,12 @@ function readPreference(): ThemePreference {
  * page never flashes the wrong theme. Pair with suppressHydrationWarning on <html>.
  */
 export function ThemeScript() {
-  const code = `(function(){try{var p=localStorage.getItem("${STORAGE_KEY}");if(p!=="light"&&p!=="dark"){p=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=p}catch(e){document.documentElement.dataset.theme="light"}})();`;
+  const code = `(function(){try{var p=localStorage.getItem("${STORAGE_KEY}");if(p==="system"){p=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}else if(p!=="dark"){p="light"}document.documentElement.dataset.theme=p}catch(e){document.documentElement.dataset.theme="light"}})();`;
   return <script dangerouslySetInnerHTML={{ __html: code }} />;
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const [preference, setPreferenceState] = useState<ThemePreference>("light");
   const [system, setSystem] = useState<ResolvedTheme>("light");
 
   useEffect(() => {
