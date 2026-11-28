@@ -147,3 +147,4 @@ docs/                 ai.md · architecture.md · database.md · api.md · decis
 - [`docs/master-note.md`](docs/master-note.md) — the full project master note
 - [`docs/architecture.md`](docs/architecture.md) · [`docs/database.md`](docs/database.md) · [`docs/api.md`](docs/api.md)
 - [`docs/deployment.md`](docs/deployment.md) — deployment notes
+- [`docs/frontend-redesign-plan.md`](docs/frontend-redesign-plan.md) — 4-day frontend redesign plan and design system
