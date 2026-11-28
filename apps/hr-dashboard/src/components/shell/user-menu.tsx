@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Avatar } from "@repo/ui/avatar";
 import {
@@ -14,6 +15,7 @@ import { authClient, useSession } from "@/lib/auth-client";
 
 export function UserMenu() {
   const { data: session } = useSession();
+  const router = useRouter();
   const user = session?.user;
   if (!user) return null;
   const name = user.name || user.email;
@@ -35,7 +37,7 @@ export function UserMenu() {
         <DropdownMenuItem
           onSelect={async () => {
             await authClient.signOut();
-            window.location.assign("/");
+            router.replace("/sign-in");
           }}
         >
           <LogOut aria-hidden /> Sign out

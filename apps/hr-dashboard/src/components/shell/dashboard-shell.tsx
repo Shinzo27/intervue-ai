@@ -60,7 +60,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           icon: LogOut,
           onSelect: async () => {
             await authClient.signOut();
-            window.location.assign("/");
+            router.replace("/sign-in");
           },
         },
       ],
