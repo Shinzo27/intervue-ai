@@ -148,6 +148,8 @@
   --animate-dialog-out: dialog-out 170ms var(--ease-in);
   --animate-sheet-in: sheet-in 250ms var(--ease-out);
   --animate-sheet-out: sheet-out 170ms var(--ease-in);
+  --animate-sheet-in-left: sheet-in-left 250ms var(--ease-out);
+  --animate-sheet-out-left: sheet-out-left 170ms var(--ease-in);
   --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
@@ -159,6 +161,8 @@
 @keyframes dialog-out { to { opacity: 0; transform: translate(-50%, -48%) scale(0.97); } }
 @keyframes sheet-in { from { transform: translateX(100%); } }
 @keyframes sheet-out { to { transform: translateX(100%); } }
+@keyframes sheet-in-left { from { transform: translateX(-100%); } }
+@keyframes sheet-out-left { to { transform: translateX(-100%); } }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
 @layer base {

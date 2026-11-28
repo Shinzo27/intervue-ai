@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MonoLabel } from "@repo/ui/mono-label";
+import { MonoLabel } from "@/components/legacy/mono-label";
 
 export function Differentiator() {
   return (

@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Button } from "@repo/ui/button";
-import { Input } from "@repo/ui/input";
-import { MonoLabel } from "@repo/ui/mono-label";
+import { Button } from "@/components/legacy/button";
+import { Input } from "@/components/legacy/input";
+import { MonoLabel } from "@/components/legacy/mono-label";
 
 export function Demo() {
   return (

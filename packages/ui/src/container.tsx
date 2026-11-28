@@ -1,14 +1,7 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes } from "react";
+import { cn } from "./lib/cn";
 
-interface ContainerProps {
-  children: ReactNode;
-  className?: string;
-}
-
-export function Container({ children, className = "" }: ContainerProps) {
-  return (
-    <div className={`mx-auto w-full max-w-230 px-6 ${className}`}>
-      {children}
-    </div>
-  );
+/** Centred content column: max 1280px with responsive side gutters. */
+export function Container({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8", className)} {...props} />;
 }

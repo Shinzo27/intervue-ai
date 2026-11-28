@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
-import { MonoLabel } from "@repo/ui/mono-label";
+import { Badge } from "@/components/legacy/badge";
+import { Button } from "@/components/legacy/button";
+import { MonoLabel } from "@/components/legacy/mono-label";
 
 const plans = [
   {

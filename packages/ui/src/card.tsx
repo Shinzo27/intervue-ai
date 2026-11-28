@@ -1,16 +1,36 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes } from "react";
+import { cn } from "./lib/cn";
 
-interface CardProps {
-  children: ReactNode;
-  className?: string;
-}
-
-export function Card({ children, className = "" }: CardProps) {
+export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`rounded-(--radius-card) border border-(--border) bg-(--surface) ${className}`}
-    >
-      {children}
-    </div>
+      className={cn("rounded-lg border border-border bg-surface text-fg shadow-sm", className)}
+      {...props}
+    />
+  );
+}
+
+export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("flex flex-col gap-1 p-5 pb-0", className)} {...props} />;
+}
+
+export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
+  return <h3 className={cn("text-base font-semibold leading-6 text-fg", className)} {...props} />;
+}
+
+export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
+  return <p className={cn("text-sm text-muted-fg", className)} {...props} />;
+}
+
+export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("p-5", className)} {...props} />;
+}
+
+export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("flex items-center justify-end gap-2 border-t border-border px-5 py-3", className)}
+      {...props}
+    />
   );
 }
