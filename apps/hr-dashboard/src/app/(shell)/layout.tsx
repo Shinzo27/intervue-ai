@@ -34,7 +34,7 @@ function SignIn() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="panel-2 mb-3 w-full px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          className="panel-2 mb-3 w-full px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
           placeholder="you@company.com"
         />
 
@@ -44,16 +44,16 @@ function SignIn() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="panel-2 mb-4 w-full px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          className="panel-2 mb-4 w-full px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
           placeholder="••••••••"
         />
 
-        {error && <p className="mb-3 text-xs text-[var(--fail)]">{error}</p>}
+        {error && <p className="mb-3 text-xs text-[var(--danger)]">{error}</p>}
 
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-60"
+          className="w-full rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-[var(--on-primary)] disabled:opacity-60"
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>

@@ -54,14 +54,14 @@ export default function PipelinesPage() {
               setCreating(false);
             }
           }}
-          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-50"
+          className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-50"
         >
           {creating ? "Creating…" : "New pipeline"}
         </button>
       </div>
 
       {error && (
-        <div className="panel mt-5 border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+        <div className="panel mt-5 border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}
@@ -92,7 +92,7 @@ export default function PipelinesPage() {
                     <td>
                       <a
                         href={`/pipelines/${p.id}`}
-                        className="font-medium hover:text-[var(--accent)] hover:underline"
+                        className="font-medium hover:text-[var(--primary)] hover:underline"
                       >
                         {p.name}
                       </a>
@@ -102,7 +102,7 @@ export default function PipelinesPage() {
                       {!versions ? (
                         <a
                           href={`/pipelines/${p.id}`}
-                          className="chip hover:border-[var(--accent)]"
+                          className="chip hover:border-[var(--primary)]"
                         >
                           open builder
                         </a>

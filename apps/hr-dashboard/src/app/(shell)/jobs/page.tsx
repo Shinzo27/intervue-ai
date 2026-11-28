@@ -33,7 +33,7 @@ export default function JobsPage() {
       </p>
 
       {error && (
-        <div className="panel mt-5 border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+        <div className="panel mt-5 border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}
@@ -60,7 +60,7 @@ export default function JobsPage() {
                   <td>
                     <a
                       href={`/jobs/${j.id}`}
-                      className="font-medium hover:text-[var(--accent)] hover:underline"
+                      className="font-medium hover:text-[var(--primary)] hover:underline"
                     >
                       {j.title}
                     </a>

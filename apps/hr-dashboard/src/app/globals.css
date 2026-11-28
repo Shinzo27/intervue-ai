@@ -1,92 +1,83 @@
 @import "tailwindcss";
+@import "@repo/ui/styles/tokens.css";
 
-:root {
-  --bg: #0a0e14;
-  --panel: #111721;
-  --panel-2: #151d29;
-  --border: #1f2a3a;
-  --fg: #e6edf7;
-  --muted: #8b9bb4;
-  --accent: #6366f1;
-  --accent-fg: #ffffff;
-  --pass: #22c55e;
-  --fail: #ef4444;
-  --warn: #f59e0b;
-}
+/*
+ * LEGACY — utility classes used by pages that have not been rebuilt yet.
+ * They now render with the shared tokens. Delete each rule once the last
+ * page using it moves to @repo/ui components (day 2–3 of the redesign).
+ */
+@layer components {
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+  }
 
-html,
-body {
-  background: var(--bg);
-  color: var(--fg);
-}
+  .panel-2 {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
 
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
+  .muted {
+    color: var(--muted-fg);
+  }
 
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-}
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1rem;
+    background: var(--surface-2);
+    color: var(--muted-fg);
+    border: 1px solid var(--border);
+  }
 
-.panel-2 {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-}
+  .chip-pass {
+    color: var(--success);
+    background: var(--success-subtle);
+    border-color: transparent;
+  }
 
-.muted {
-  color: var(--muted);
-}
+  .chip-fail {
+    color: var(--danger);
+    background: var(--danger-subtle);
+    border-color: transparent;
+  }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  background: var(--panel-2);
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+  .chip-warn {
+    color: var(--warning);
+    background: var(--warning-subtle);
+    border-color: transparent;
+  }
 
-.chip-pass {
-  color: var(--pass);
-  border-color: color-mix(in srgb, var(--pass) 40%, transparent);
-}
-.chip-fail {
-  color: var(--fail);
-  border-color: color-mix(in srgb, var(--fail) 40%, transparent);
-}
-.chip-warn {
-  color: var(--warn);
-  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
-}
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
 
-table.data {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-table.data th {
-  text-align: left;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-table.data td {
-  padding: 0.7rem 0.75rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-}
-table.data tr:hover td {
-  background: color-mix(in srgb, var(--panel-2) 60%, transparent);
+  table.data th {
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted-fg);
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  table.data td {
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  table.data tr:hover td {
+    background: var(--surface-hover);
+  }
 }

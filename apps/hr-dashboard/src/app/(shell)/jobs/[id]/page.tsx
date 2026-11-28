@@ -101,7 +101,7 @@ export default function JobDetailPage() {
   if (loading) return <p className="muted text-sm">Loading job…</p>;
   if (!job)
     return (
-      <div className="panel border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+      <div className="panel border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
         {error ?? "Job not found"}
       </div>
     );
@@ -139,7 +139,7 @@ export default function JobDetailPage() {
             <button
               onClick={publish}
               disabled={busy}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-60"
+              className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-60"
             >
               {busy ? "Publishing…" : "Publish job"}
             </button>
@@ -147,10 +147,10 @@ export default function JobDetailPage() {
         </div>
       </header>
 
-      {error && <p className="mt-3 text-xs text-[var(--fail)]">{error}</p>}
+      {error && <p className="mt-3 text-xs text-[var(--danger)]">{error}</p>}
 
       {job.status === "DRAFT" && (
-        <div className="panel mt-4 border-[var(--warn)] p-3 text-xs">
+        <div className="panel mt-4 border-[var(--warning)] p-3 text-xs">
           Publishing freezes the pipeline into an immutable snapshot for this job —
           later edits to the pipeline template will not affect it.
         </div>
@@ -188,7 +188,7 @@ export default function JobDetailPage() {
           <button
             type="submit"
             disabled={busy || job.status !== "PUBLISHED"}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-50"
+            className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-50"
           >
             {busy ? "Inviting…" : "Invite"}
           </button>
@@ -207,7 +207,7 @@ export default function JobDetailPage() {
               href={inviteLink}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 block break-all text-[var(--accent)] hover:underline"
+              className="mt-1 block break-all text-[var(--primary)] hover:underline"
             >
               {inviteLink}
             </a>
@@ -250,7 +250,7 @@ export default function JobDetailPage() {
                   <td className="text-right">
                     <a
                       href={`/applications/${a.id}`}
-                      className="text-xs text-[var(--accent)] hover:underline"
+                      className="text-xs text-[var(--primary)] hover:underline"
                     >
                       Review →
                     </a>

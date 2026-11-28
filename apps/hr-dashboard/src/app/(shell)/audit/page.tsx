@@ -53,7 +53,7 @@ export default function AuditPage() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={filter === f ? "chip chip-pass" : "chip hover:border-[var(--accent)]"}
+            className={filter === f ? "chip chip-pass" : "chip hover:border-[var(--primary)]"}
           >
             {f.toLowerCase()}
           </button>
@@ -61,7 +61,7 @@ export default function AuditPage() {
       </div>
 
       {error && (
-        <div className="panel mt-4 border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+        <div className="panel mt-4 border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}

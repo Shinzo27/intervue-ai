@@ -117,14 +117,14 @@ export function StageEditor({
                 });
               })
             }
-            className="rounded border border-[var(--border)] px-2 py-1 text-[var(--fail)]"
+            className="rounded border border-[var(--border)] px-2 py-1 text-[var(--danger)]"
           >
             delete stage
           </button>
         </div>
       </div>
 
-      {error && <p className="px-4 pt-3 text-xs text-[var(--fail)]">{error}</p>}
+      {error && <p className="px-4 pt-3 text-xs text-[var(--danger)]">{error}</p>}
 
       <div className="divide-y divide-[var(--border)]">
         {stage.questions.map((question) => (
@@ -186,7 +186,7 @@ function AddQuestion({ stage, onChanged }: { stage: Stage; onChanged: () => void
             setBusy(false);
           }
         }}
-        className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-50"
+        className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-50"
       >
         Add question
       </button>
@@ -264,7 +264,7 @@ function QuestionEditor({
           <button
             disabled={busy}
             onClick={() => run(() => apiFetch(base, { method: "DELETE" }))}
-            className="rounded border border-[var(--border)] px-2 py-1 text-[var(--fail)]"
+            className="rounded border border-[var(--border)] px-2 py-1 text-[var(--danger)]"
           >
             delete
           </button>
@@ -292,7 +292,7 @@ function QuestionEditor({
             Rubric criteria (drives AI scoring)
           </div>
           {question.rubricCriteria.length === 0 ? (
-            <p className="text-xs text-[var(--warn)]">
+            <p className="text-xs text-[var(--warning)]">
               No criteria — this question cannot be scored.
             </p>
           ) : (
@@ -310,7 +310,7 @@ function QuestionEditor({
                         apiFetch(`${base}/rubrics/${c.id}`, { method: "DELETE" }),
                       )
                     }
-                    className="muted hover:text-[var(--fail)]"
+                    className="muted hover:text-[var(--danger)]"
                   >
                     remove
                   </button>
@@ -373,7 +373,7 @@ function QuestionEditor({
                         apiFetch(`${base}/options/${o.id}`, { method: "DELETE" }),
                       )
                     }
-                    className="muted hover:text-[var(--fail)]"
+                    className="muted hover:text-[var(--danger)]"
                   >
                     remove
                   </button>

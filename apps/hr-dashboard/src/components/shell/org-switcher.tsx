@@ -58,7 +58,7 @@ export function OrgSwitcher() {
         ))}
       </select>
       {!active && orgs.length > 0 && (
-        <span className="text-[11px] text-[var(--warn)]">pick one to load data</span>
+        <span className="text-[11px] text-[var(--warning)]">pick one to load data</span>
       )}
     </div>
   );

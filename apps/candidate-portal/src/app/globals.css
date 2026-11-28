@@ -1,74 +1,67 @@
 @import "tailwindcss";
+@import "@repo/ui/styles/tokens.css";
 
-:root {
-  --bg: #f7f8fb;
-  --panel: #ffffff;
-  --border: #e4e7ee;
-  --fg: #16181d;
-  --muted: #6b7280;
-  --accent: #4f46e5;
-  --accent-soft: #eef0ff;
-  --ok: #16a34a;
+@layer base {
+  /* The candidate portal reads at 16px minimum (redesign plan). */
+  body {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+
+  textarea,
+  input {
+    font: inherit;
+  }
 }
 
-html,
-body {
-  background: var(--bg);
-  color: var(--fg);
-}
+/*
+ * LEGACY — classes used by the interview page until its day-3 rebuild.
+ * They now render with the shared tokens.
+ */
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+  }
 
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
+  .muted {
+    color: var(--muted-fg);
+  }
 
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
-}
+  .bubble {
+    max-width: 42rem;
+    padding: 0.75rem 1rem;
+    border-radius: 16px;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    white-space: pre-wrap;
+  }
 
-.muted {
-  color: var(--muted);
-}
+  .bubble-ai {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
 
-.bubble {
-  max-width: 42rem;
-  padding: 0.85rem 1.05rem;
-  border-radius: 1rem;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  white-space: pre-wrap;
-}
+  .bubble-me {
+    background: var(--primary);
+    color: var(--on-primary);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+  }
 
-.bubble-ai {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-bottom-left-radius: 0.25rem;
-}
+  .progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
 
-.bubble-me {
-  background: var(--accent);
-  color: white;
-  border-bottom-right-radius: 0.25rem;
-  margin-left: auto;
-}
-
-.progress-track {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--border);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent);
-  transition: width 300ms ease;
-}
-
-textarea,
-input {
-  font: inherit;
+  .progress-fill {
+    height: 100%;
+    background: var(--primary);
+    transition: width 300ms ease;
+  }
 }

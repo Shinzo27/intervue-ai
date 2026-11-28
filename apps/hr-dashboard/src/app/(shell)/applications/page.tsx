@@ -44,7 +44,7 @@ export default function ApplicationsPage() {
             className={
               filter === f
                 ? "chip chip-pass"
-                : "chip hover:border-[var(--accent)]"
+                : "chip hover:border-[var(--primary)]"
             }
           >
             {f.toLowerCase()}
@@ -53,7 +53,7 @@ export default function ApplicationsPage() {
       </div>
 
       {error && (
-        <div className="panel mt-5 border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+        <div className="panel mt-5 border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}
@@ -93,7 +93,7 @@ export default function ApplicationsPage() {
                   <td className="text-right">
                     <a
                       href={`/applications/${a.id}`}
-                      className="text-xs text-[var(--accent)] hover:underline"
+                      className="text-xs text-[var(--primary)] hover:underline"
                     >
                       Review →
                     </a>

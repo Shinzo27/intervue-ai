@@ -53,7 +53,7 @@ export default function DashboardPage() {
       </p>
 
       {error && (
-        <div className="panel mt-5 border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+        <div className="panel mt-5 border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}

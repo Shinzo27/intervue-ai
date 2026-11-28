@@ -91,7 +91,7 @@ export default function ApplicationReviewPage() {
   if (loading) return <p className="muted text-sm">Loading review…</p>;
   if (error)
     return (
-      <div className="panel border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+      <div className="panel border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
         {error}
       </div>
     );
@@ -230,12 +230,12 @@ function QuestionRow({ q }: { q: Question }) {
                       {c.score}/{c.maxScore}
                     </span>
                   </div>
-                  <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--panel-2)]">
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--surface-2)]">
                     <div
                       className="h-1.5 rounded-full"
                       style={{
                         width: `${Math.max(2, Math.min(100, pct))}%`,
-                        background: pct >= 70 ? "var(--pass)" : "var(--warn)",
+                        background: pct >= 70 ? "var(--success)" : "var(--warning)",
                       }}
                     />
                   </div>
@@ -397,7 +397,7 @@ function DecisionPanel({ review, onChanged }: { review: Review; onChanged: () =>
             {review.interview && (
               <button
                 onClick={() => setOpen((v) => !v)}
-                className="mt-4 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--panel-2)]"
+                className="mt-4 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-2)]"
               >
                 {open ? "Cancel override" : "Override decision"}
               </button>
@@ -425,11 +425,11 @@ function DecisionPanel({ review, onChanged }: { review: Review; onChanged: () =>
                   className="panel w-full px-3 py-2 text-xs"
                   rows={3}
                 />
-                {error && <p className="text-xs text-[var(--fail)]">{error}</p>}
+                {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
                 <button
                   type="submit"
                   disabled={busy}
-                  className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-60"
+                  className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-[var(--on-primary)] disabled:opacity-60"
                 >
                   {busy ? "Saving…" : "Confirm override"}
                 </button>

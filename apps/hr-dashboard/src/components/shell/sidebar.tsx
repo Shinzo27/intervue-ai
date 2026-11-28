@@ -15,9 +15,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 shrink-0 border-r border-[var(--border)] bg-[var(--panel)] p-4">
+    <aside className="w-60 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] p-4">
       <div className="mb-6 flex items-center gap-2 px-2">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg)]">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--primary)] text-sm font-bold text-[var(--on-primary)]">
           IA
         </span>
         <div className="leading-tight">
@@ -35,8 +35,8 @@ export function Sidebar() {
               href={item.href}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                 active
-                  ? "bg-[var(--panel-2)] font-medium text-[var(--fg)]"
-                  : "muted hover:bg-[var(--panel-2)] hover:text-[var(--fg)]"
+                  ? "bg-[var(--surface-2)] font-medium text-[var(--fg)]"
+                  : "muted hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
               }`}
             >
               <span className="w-4 text-center opacity-80">{item.icon}</span>

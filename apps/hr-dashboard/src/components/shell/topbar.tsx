@@ -13,7 +13,7 @@ export function Topbar() {
   const router = useRouter();
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[var(--border)] bg-[var(--panel)] px-5">
+    <header className="flex h-14 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-5">
       <div className="flex items-center gap-3">
         <OrgSwitcher />
         <span className="muted text-xs">
@@ -28,7 +28,7 @@ export function Topbar() {
           <>
             <span className="muted text-xs">{session.user.email}</span>
             <button
-              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--panel-2)]"
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-2)]"
               onClick={async () => {
                 await authClient.signOut();
                 router.refresh();

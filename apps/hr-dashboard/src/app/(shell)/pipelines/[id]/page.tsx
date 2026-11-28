@@ -77,7 +77,7 @@ export default function PipelineBuilderPage() {
   if (loading) return <p className="muted text-sm">Loading pipeline…</p>;
   if (!pipeline)
     return (
-      <div className="panel border-[var(--fail)] p-4 text-sm text-[var(--fail)]">
+      <div className="panel border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
         {error ?? "Pipeline not found"}
       </div>
     );
@@ -104,7 +104,7 @@ export default function PipelineBuilderPage() {
           <button
             onClick={publish}
             disabled={busy}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-[var(--accent-fg)] disabled:opacity-60"
+            className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-[var(--on-primary)] disabled:opacity-60"
           >
             {busy ? "Publishing…" : "Publish version"}
           </button>
@@ -112,7 +112,7 @@ export default function PipelineBuilderPage() {
       </header>
 
       {/* The draft/snapshot distinction is the point of this screen (§10, §48). */}
-      <div className="panel mt-4 border-[var(--warn)] p-3 text-xs">
+      <div className="panel mt-4 border-[var(--warning)] p-3 text-xs">
         <strong>You are editing the draft template.</strong>{" "}
         <span className="muted">
           Published versions are immutable snapshots — jobs already pinned to an older
@@ -122,9 +122,9 @@ export default function PipelineBuilderPage() {
       </div>
 
       {notice && (
-        <p className="mt-3 text-xs text-[var(--pass)]">{notice}</p>
+        <p className="mt-3 text-xs text-[var(--success)]">{notice}</p>
       )}
-      {error && <p className="mt-3 text-xs text-[var(--fail)]">{error}</p>}
+      {error && <p className="mt-3 text-xs text-[var(--danger)]">{error}</p>}
 
       <section className="panel mt-4 overflow-hidden">
         <div className="border-b border-[var(--border)] px-4 py-2.5 text-sm font-medium">

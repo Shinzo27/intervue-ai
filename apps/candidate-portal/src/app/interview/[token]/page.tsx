@@ -264,7 +264,7 @@ export default function InterviewPage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 py-8">
       <header className="mb-6">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-[var(--accent)]">Intervue AI</span>
+          <span className="text-sm font-semibold text-[var(--primary)]">Intervue AI</span>
           {access && (
             <span className="muted text-xs">
               {access.job.title} · {access.candidate.name}
@@ -313,7 +313,7 @@ export default function InterviewPage() {
           <button
             onClick={begin}
             disabled={busy}
-            className="mt-6 w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
+            className="mt-6 w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
             {busy ? "Starting…" : "Start interview"}
           </button>
@@ -348,7 +348,7 @@ export default function InterviewPage() {
               <button
                 onClick={send}
                 disabled={busy || !draft.trim()}
-                className="mt-3 w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
+                className="mt-3 w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
               >
                 {busy ? "Sending…" : "Send answer"}
               </button>
