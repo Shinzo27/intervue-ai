@@ -148,3 +148,4 @@ docs/                 ai.md · architecture.md · database.md · api.md · decis
 - [`docs/architecture.md`](docs/architecture.md) · [`docs/database.md`](docs/database.md) · [`docs/api.md`](docs/api.md)
 - [`docs/deployment.md`](docs/deployment.md) — deployment notes
 - [`docs/frontend-redesign-plan.md`](docs/frontend-redesign-plan.md) — 4-day frontend redesign plan and design system
+- [`docs/bug-list.md`](docs/bug-list.md) — open and fixed bugs with severity and fixing commit
