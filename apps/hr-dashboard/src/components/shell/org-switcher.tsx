@@ -1,18 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Building2, ChevronsUpDown } from "lucide-react";
+import { Badge } from "@repo/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/dropdown-menu";
+import { Spinner } from "@repo/ui/spinner";
 import { authClient, useSession } from "@/lib/auth-client";
 
 interface Org {
   id: string;
   name: string;
-  slug?: string | null;
 }
 
 /**
- * Organization switcher — Better Auth organization plugin.
- * Every backend query is scoped to the active organization, so this is the
- * tenant boundary for the whole dashboard.
+ * Organization switcher (Better Auth organization plugin). Every backend
+ * query is scoped to the active organization: this is the tenant boundary.
  */
 export function OrgSwitcher() {
   const { data: session } = useSession();
@@ -31,35 +40,45 @@ export function OrgSwitcher() {
   }, [session?.session]);
 
   async function activate(id: string) {
+    if (id === activeId) return;
     setBusy(true);
     await authClient.organization.setActive({ organizationId: id });
-    setBusy(false);
     window.location.reload();
   }
 
-  const active = orgs.find((o) => o.id === activeId);
+  const active = orgs.find((org) => org.id === activeId);
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="chip">org</span>
-      <select
-        className="panel-2 px-2 py-1 text-xs"
-        value={activeId ?? ""}
-        disabled={busy}
-        onChange={(e) => activate(e.target.value)}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="flex h-9 min-w-0 max-w-56 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-sm font-medium text-fg shadow-sm transition-colors hover:bg-surface-hover"
+        aria-label={active ? `Organization: ${active.name}. Switch organization` : "Choose organization"}
       >
-        <option value="" disabled>
-          {orgs.length ? "select organization…" : "no organizations"}
-        </option>
-        {orgs.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
+        <span className="grid size-5 shrink-0 place-items-center rounded-sm bg-primary-subtle text-primary">
+          {busy ? <Spinner className="size-3" /> : <Building2 className="size-3.5" aria-hidden />}
+        </span>
+        <span className="truncate">{active?.name ?? "Choose organization"}</span>
+        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-fg" aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+        {orgs.length === 0 ? (
+          <p className="px-2 pb-2 text-sm text-muted-fg">You don&apos;t belong to an organization yet.</p>
+        ) : (
+          <DropdownMenuRadioGroup value={activeId ?? ""} onValueChange={activate}>
+            {orgs.map((org) => (
+              <DropdownMenuRadioItem key={org.id} value={org.id}>
+                <span className="truncate">{org.name}</span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        )}
+      </DropdownMenuContent>
       {!active && orgs.length > 0 && (
-        <span className="text-[11px] text-[var(--warning)]">pick one to load data</span>
+        <Badge variant="warning" className="hidden sm:inline-flex">
+          Pick one to load data
+        </Badge>
       )}
-    </div>
+    </DropdownMenu>
   );
 }

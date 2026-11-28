@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Sidebar } from "@/components/shell/sidebar";
-import { Topbar } from "@/components/shell/topbar";
+import { Spinner } from "@repo/ui/spinner";
+import { DashboardShell } from "@/components/shell/dashboard-shell";
 import { authClient, useSession } from "@/lib/auth-client";
 
 function SignIn() {
@@ -67,21 +67,15 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
 
   if (isPending) {
     return (
-      <div className="grid min-h-screen place-items-center">
-        <span className="muted text-sm">Loading session…</span>
+      <div className="grid min-h-dvh place-items-center">
+        <span className="flex items-center gap-2 text-sm text-muted-fg">
+          <Spinner /> Loading your workspace…
+        </span>
       </div>
     );
   }
 
   if (!session?.user) return <SignIn />;
 
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar />
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
-  );
+  return <DashboardShell>{children}</DashboardShell>;
 }
