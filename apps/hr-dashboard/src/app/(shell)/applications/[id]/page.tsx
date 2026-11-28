@@ -397,7 +397,7 @@ function DecisionCard({ review, onChanged }: { review: Review; onChanged: () => 
                   </Button>
                 }
                 title="Record a Pass?"
-                description="The decision is audited under your name. It can be overridden later with a reason."
+                description="You can override it later; overrides need a reason and keep the previous outcome."
                 confirmLabel="Record Pass"
                 onConfirm={() => record("PASS")}
               />
@@ -408,7 +408,7 @@ function DecisionCard({ review, onChanged }: { review: Review; onChanged: () => 
                   </Button>
                 }
                 title="Record a Fail?"
-                description="The decision is audited under your name. It can be overridden later with a reason."
+                description="You can override it later; overrides need a reason and keep the previous outcome."
                 confirmLabel="Record Fail"
                 destructive
                 onConfirm={() => record("FAIL")}

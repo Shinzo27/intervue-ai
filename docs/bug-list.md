@@ -1,7 +1,7 @@
 # Bug list
 
-_As of 2026-11-28._ Bugs found while bringing the stack up and during days 1–2 of the frontend redesign.
-**9 are open** and **12 are fixed**. Each fixed entry names the commit that fixed it.
+_As of 2026-11-28._ Bugs found while bringing the stack up and during days 1–3 of the frontend redesign.
+**10 are open** and **12 are fixed**. Each fixed entry names the commit that fixed it.
 
 Severity: **High** blocks running, building or using a core flow · **Medium** wrong behaviour with a workaround · **Low** cosmetic, tooling or docs.
 
@@ -18,6 +18,7 @@ Severity: **High** blocks running, building or using a core flow · **Medium** w
 | 7 | Low | Tooling | `infra/postman/update_collection.py` reads from `C:/Users/PRATHAM/Downloads/…` and writes to `E:/Projects/…`. | The collection can only be regenerated on the original author's machine. | Take the source path as an argument; write next to the script. |
 | 8 | Low | Docs | `docs/api.md`, `docs/architecture.md`, `docs/database.md` and `docs/frontend.md` are empty but linked from the README. | Readers hit blank pages. | Fill them, or remove the links until they're written. |
 | 9 | Medium | Backend API | Recording a decision (`POST /interviews/:id/decision`, and overrides) leaves the application in `COMPLETED` instead of moving it to `DECIDED`. | Decided candidates stay under "Awaiting decision" in the applications list and on the dashboard. The review page derives "Decided" from the decision as a workaround. | Set the application status to `DECIDED` in the same transaction that creates the decision. |
+| 10 | Medium | Audit | A decision recorded by a person (`POST /interviews/:id/decision`) writes no audit event; only AI-created decisions and overrides are audited. | Breaks the "every action, human or AI, lands in the audit trail" promise for a hiring decision. | Write an audit event with `actorType: USER` when the decision is created. |
 
 **Also noted (not bugs):** `pnpm install` warns about an unmet peer dependency (`@better-auth/drizzle-adapter` wants `drizzle-orm@^0.45.2`; `0.41.0` is installed). It has no visible effect today.
 
