@@ -30,4 +30,4 @@ EXPOSE 3000
 
 # Migrations run at container start so `docker compose up` yields a usable
 # database; the API only begins serving after the schema is current.
-CMD ["sh", "-c", "pnpm --filter backend exec prisma migrate deploy && node services/backend/dist/main"]
+CMD ["sh", "-c", "pnpm --filter backend exec prisma migrate deploy && node services/backend/dist/src/main"]

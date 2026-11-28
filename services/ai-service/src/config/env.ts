@@ -129,7 +129,16 @@ function isUsableKey(value: string): boolean {
 }
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const parsed = envSchema.safeParse(source);
+  // Compose passes unset keys as empty strings (`${OPENAI_API_KEY:-}`); treat
+  // blank as absent so the offline `fake` provider boots without any keys.
+  const cleaned: NodeJS.ProcessEnv = { ...source };
+  for (const key of ['OPENAI_API_KEY', 'GROQ_API_KEY', 'MCP_HTTP_TOKEN'] as const) {
+    if (cleaned[key] !== undefined && cleaned[key]!.trim() === '') {
+      delete cleaned[key];
+    }
+  }
+
+  const parsed = envSchema.safeParse(cleaned);
 
   if (!parsed.success) {
     const issues = parsed.error.issues

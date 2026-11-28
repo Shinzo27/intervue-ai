@@ -7,15 +7,16 @@ run report. Python stdlib only (urllib + cookiejar for Better Auth sessions).
 """
 
 import json
+import os
 import time
 import urllib.error
 import urllib.request
 import http.cookiejar
 from datetime import datetime, timezone
+from pathlib import Path
 
 BASE = "http://localhost:3000"
 RUN_TAG = str(int(time.time()))
-INTERNAL_SECRET = None  # read from .env below
 
 # Wait for the backend to be reachable before starting the chain.
 for attempt in range(30):
@@ -30,10 +31,20 @@ for attempt in range(30):
 else:
     raise SystemExit("backend did not become ready within 60s")
 
-for line in open(r"E:/Projects/intervue-ai/services/backend/.env", encoding="utf-8"):
-    if line.startswith("INTERNAL_SERVICE_SECRET="):
-        INTERNAL_SERVICE_SECRET = line.split("=", 1)[1].strip().strip("\r")
-        break
+# Resolve the internal service secret, in order:
+#   1. INTERNAL_SERVICE_SECRET env var (explicit override)
+#   2. services/backend/.env, resolved relative to this repo (local dev)
+#   3. the docker-compose default (full stack has no backend .env file)
+INTERNAL_SERVICE_SECRET = os.environ.get("INTERNAL_SERVICE_SECRET")
+if not INTERNAL_SERVICE_SECRET:
+    backend_env = Path(__file__).resolve().parents[2] / "services" / "backend" / ".env"
+    if backend_env.is_file():
+        for line in backend_env.read_text(encoding="utf-8").splitlines():
+            if line.startswith("INTERNAL_SERVICE_SECRET="):
+                INTERNAL_SERVICE_SECRET = line.split("=", 1)[1].strip().strip('"')
+                break
+if not INTERNAL_SERVICE_SECRET:
+    INTERNAL_SERVICE_SECRET = "dev-internal-service-secret"
 
 jar = http.cookiejar.CookieJar()
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
