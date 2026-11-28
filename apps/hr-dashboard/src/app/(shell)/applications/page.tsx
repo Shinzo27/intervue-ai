@@ -1,109 +1,196 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
+import { ClipboardList, Search } from "lucide-react";
+import { Alert } from "@repo/ui/alert";
+import { Avatar } from "@repo/ui/avatar";
+import { DataTable, type Column } from "@repo/ui/data-table";
+import { EmptyState } from "@repo/ui/empty-state";
+import { Input } from "@repo/ui/input";
+import { PageHeader } from "@repo/ui/page-header";
+import { paginate, Pagination } from "@repo/ui/pagination";
+import { Select } from "@repo/ui/select";
+import { StatusPill } from "@repo/ui/status-pill";
+import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { CopyIconButton } from "@/components/copy-button";
 import { apiFetch } from "@/lib/api";
+import { formatDate, fullName } from "@/lib/format";
+import type { Application, Job } from "@/lib/types";
+import { interviewLink } from "@/lib/urls";
+import { useResource } from "@/lib/use-resource";
 
-interface Application {
-  id: string;
-  status: string;
-  createdAt: string;
-  completedAt: string | null;
-  candidate: { firstName: string; lastName: string; email: string };
-  jobPosting: { title: string };
+const PAGE_SIZE = 25;
+const ALL_JOBS = "__all";
+
+const FILTERS: { value: string; label: string; statuses: string[] | null }[] = [
+  { value: "all", label: "All", statuses: null },
+  { value: "awaiting", label: "Awaiting decision", statuses: ["COMPLETED"] },
+  { value: "active", label: "In progress", statuses: ["STARTED", "IN_PROGRESS"] },
+  { value: "invited", label: "Invited", statuses: ["INVITED"] },
+  { value: "decided", label: "Decided", statuses: ["DECIDED"] },
+];
+
+async function loadApplications() {
+  const [applications, jobs] = await Promise.all([
+    apiFetch<Application[]>("/applications"),
+    apiFetch<Job[]>("/job-postings"),
+  ]);
+  return { applications, jobs };
 }
 
-const FILTERS = ["ALL", "INVITED", "IN_PROGRESS", "COMPLETED", "DECIDED"] as const;
-
 export default function ApplicationsPage() {
-  const [apps, setApps] = useState<Application[]>([]);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("ALL");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, error, loading } = useResource("applications", loadApplications);
+  const [filter, setFilter] = useState("all");
+  const [jobId, setJobId] = useState(ALL_JOBS);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    apiFetch<Application[]>("/applications")
-      .then(setApps)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
-      .finally(() => setLoading(false));
-  }, []);
+  const applications = data?.applications ?? [];
+  const inFilter = (a: Application, value: string) => {
+    const statuses = FILTERS.find((f) => f.value === value)?.statuses;
+    return !statuses || statuses.includes(a.status);
+  };
+  const needle = query.trim().toLowerCase();
+  const visible = applications.filter(
+    (a) =>
+      inFilter(a, filter) &&
+      (jobId === ALL_JOBS || a.jobPostingId === jobId) &&
+      (!needle || `${fullName(a.candidate)} ${a.candidate.email}`.toLowerCase().includes(needle)),
+  );
 
-  const shown = filter === "ALL" ? apps : apps.filter((a) => a.status === filter);
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+
+  const columns: Column<Application>[] = [
+    {
+      key: "candidate",
+      header: "Candidate",
+      sortValue: (a) => fullName(a.candidate).toLowerCase(),
+      cell: (a) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={fullName(a.candidate)} size="sm" />
+          <div className="min-w-0">
+            <Link data-row-link href={`/applications/${a.id}`} className="block truncate font-medium text-fg hover:text-primary">
+              {fullName(a.candidate)}
+            </Link>
+            <p className="truncate text-[13px] text-muted-fg">{a.candidate.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "job",
+      header: "Job",
+      hideBelow: "md",
+      sortValue: (a) => a.jobPosting?.title ?? "",
+      cell: (a) => <span className="text-fg">{a.jobPosting?.title ?? "—"}</span>,
+    },
+    { key: "status", header: "Status", sortValue: (a) => a.status, cell: (a) => <StatusPill status={a.status} /> },
+    {
+      key: "invited",
+      header: "Invited",
+      hideBelow: "lg",
+      sortValue: (a) => a.createdAt,
+      cell: (a) => <span className="text-muted-fg">{formatDate(a.createdAt)}</span>,
+    },
+    {
+      key: "completed",
+      header: "Completed",
+      hideBelow: "sm",
+      sortValue: (a) => a.completedAt ?? "",
+      cell: (a) => <span className="text-muted-fg">{a.completedAt ? formatDate(a.completedAt) : "—"}</span>,
+    },
+    {
+      key: "link",
+      header: <span className="sr-only">Interview link</span>,
+      align: "right",
+      hideBelow: "md",
+      cell: (a) => <CopyIconButton text={interviewLink(a.inviteToken)} label={`Copy interview link for ${fullName(a.candidate)}`} />,
+    },
+  ];
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <h1 className="text-xl font-semibold">Applications</h1>
-      <p className="muted mt-1 text-sm">
-        Candidate applications across every job posting in this organization.
-      </p>
+    <>
+      <PageHeader
+        title="Applications"
+        description="Every candidate across your jobs. Finished interviews wait under “Awaiting decision” until someone on your team decides."
+      />
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={
-              filter === f
-                ? "chip chip-pass"
-                : "chip hover:border-[var(--primary)]"
-            }
-          >
-            {f.toLowerCase()}
-          </button>
-        ))}
+      {error && <Alert variant="danger" title="Couldn't load applications" className="mb-4">{error}</Alert>}
+
+      <div className="mb-4 space-y-3">
+        <Tabs
+          value={filter}
+          onValueChange={(value) => {
+            setFilter(value);
+            setPage(1);
+          }}
+        >
+          <TabsList>
+            {FILTERS.map((f) => (
+              <TabsTrigger key={f.value} value={f.value}>
+                {f.label}
+                <span className="tabular rounded-sm bg-surface-2 px-1.5 text-xs text-muted-fg">
+                  {applications.filter((a) => inFilter(a, f.value)).length}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle-fg" aria-hidden />
+            <Input
+              type="search"
+              aria-label="Search candidates"
+              placeholder="Search name or email"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9"
+            />
+          </div>
+          <div className="sm:w-64">
+            <Select
+              aria-label="Filter by job"
+              value={jobId}
+              onValueChange={(value) => {
+                setJobId(value);
+                setPage(1);
+              }}
+              options={[
+                { value: ALL_JOBS, label: "All jobs" },
+                ...(data?.jobs ?? []).map((job) => ({ value: job.id, label: job.title })),
+              ]}
+            />
+          </div>
+        </div>
       </div>
 
-      {error && (
-        <div className="panel mt-5 border-[var(--danger)] p-4 text-sm text-[var(--danger)]">
-          {error}
-        </div>
-      )}
-
-      <section className="panel mt-4 overflow-hidden">
-        {loading ? (
-          <p className="muted p-4 text-sm">Loading…</p>
-        ) : shown.length === 0 ? (
-          <p className="muted p-4 text-sm">No applications match this filter.</p>
-        ) : (
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Candidate</th>
-                <th>Job</th>
-                <th>Status</th>
-                <th>Completed</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    {a.candidate?.firstName} {a.candidate?.lastName}
-                    <div className="muted text-xs">{a.candidate?.email}</div>
-                  </td>
-                  <td>{a.jobPosting?.title}</td>
-                  <td>
-                    <span className={a.status === "DECIDED" ? "chip chip-pass" : "chip"}>
-                      {a.status}
-                    </span>
-                  </td>
-                  <td className="muted text-xs">
-                    {a.completedAt ? new Date(a.completedAt).toLocaleDateString() : "—"}
-                  </td>
-                  <td className="text-right">
-                    <a
-                      href={`/applications/${a.id}`}
-                      className="text-xs text-[var(--primary)] hover:underline"
-                    >
-                      Review →
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    </div>
+      <DataTable
+        label="Applications"
+        columns={columns}
+        rows={paginate(visible, currentPage, PAGE_SIZE)}
+        getRowId={(a) => a.id}
+        loading={loading}
+        rowLinks
+        initialSort={{ key: "invited", dir: "desc" }}
+        empty={
+          applications.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No applications yet"
+              description="Publish a job and invite a candidate. Each invitation creates an application here."
+            />
+          ) : (
+            <EmptyState icon={Search} title="No applications match" description="Try another status, job or search term." />
+          )
+        }
+      />
+      <Pagination page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPageChange={setPage} />
+    </>
   );
 }
